@@ -189,3 +189,68 @@ footer {
 }
 
 /* new css */
+/* need to use . tags for eac of these rules */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #f1f1f1;
+  padding: 20px;
+  font-family: Arial;
+}
+
+/* Center website 
+.main {
+  max-width: 1000px;
+  margin: auto;
+}
+
+h1 {
+  font-size: 50px;
+  word-break: break-all;
+}
+
+.row {
+  margin: 8px -16px;
+} 
+*/
+
+/* Add padding BETWEEN each column (if you want) */
+.row-projects,
+.row-projects > .column-projects {
+  padding: 8px;
+}
+
+/* Create four equal columns that floats next to each other */
+.column-projects {
+  float: left;
+  width: 25%;
+}
+
+/* Clear floats after rows */
+.row-projects:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Content */
+.content-projects {
+  background-color: white;
+  padding: 10px;
+}
+
+/* Responsive layout - makes a two column-layout instead of four columns */
+@media screen and (max-width: 900px) {
+  .column-projects {
+    width: 50%;
+  }
+}
+
+/* Responsive layout - makes the two columns stack on top of each other instead of next to each other */
+@media screen and (max-width: 600px) {
+  .column-projects {
+    width: 100%;
+  }
+}

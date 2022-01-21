@@ -210,11 +210,11 @@ h1 {
   font-size: 50px;
   word-break: break-all;
 }
+*/
 
-.row {
+.row-projects {
   margin: 8px -16px;
 } 
-*/
 
 /* Add padding BETWEEN each column (if you want) */
 .row-projects,

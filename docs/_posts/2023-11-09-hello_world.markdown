@@ -1,8 +1,8 @@
 ---
 layout: post
-title:  "Welcome to Jekyll!"
+title:  "hello world"
 date:   2023-11-09 23:52:23 -0500
-categories: jekyll update
+categories: magic reflection syntax meta
 ---
 ### My First Blog Post
 
@@ -79,4 +79,4 @@ I present: Stock Rakdos Sacrifice (Pioneer)
 1 Kroxa, Titan of Death's Hunger
 4 Unlicensed Hearse
 
-[My Image](\assets\images\juicy-j.jpg)
+![My Image](\assets\images\juicy-j.jpg)

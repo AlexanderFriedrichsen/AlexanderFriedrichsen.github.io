@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Spelunking"
+title:  "Thanksgiving"
 date:   2023-11-10 
 categories: magic reflection syntax meta
 ---

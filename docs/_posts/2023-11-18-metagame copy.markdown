@@ -22,3 +22,7 @@ RCQ Report
 New MTG tool: 
 https://flexslot.gg/
 
+Some cube decks from the vintage 64 mans:
+![My Image](docs\assets\images\academy_emrakul_deck.png)
+![My Image](docs\assets\images\vintage_64_3-0.png)
+

@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Spelunking"
+title:  "LCI Kinda Booty"
 date:   2023-11-10 
 categories: magic reflection syntax meta
 ---

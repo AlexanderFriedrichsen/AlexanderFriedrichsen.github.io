@@ -27,7 +27,14 @@ baseurl: "" # the subpath of your site, e.g. /blog (AF: might needs quotes)
 url: https://honestafblog.com # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: apfriedr
 github_username:  AlexanderFriedrichsen
-favicon: /favicon-32x32.png
+favicon16: /_site/assets/favicon-16x16.png
+favicon32: /_site/assets/favicon-32x32.png
+favicon48: /_site/assets/favicon-48x48.png
+favicon64: /_site/assets/favicon-64x64.png
+favicon128: /_site/assets/favicon-128x128.png
+favicon192: /_site/assets/favicon-192x192.png
+appleTouchIcon: /_site/assets/apple-touch-icon.png
+
 
 # Build settings
 theme: minima

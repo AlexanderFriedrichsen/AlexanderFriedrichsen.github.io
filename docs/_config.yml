@@ -1,11 +1,4 @@
 # Welcome to Jekyll!
-#
-# This config file is meant for settings that affect your whole blog, values
-# which you are expected to set up once and rarely edit after that. If you find
-# yourself editing this file very often, consider using Jekyll's data files
-# feature for the data you need to update frequently.
-#
-# For technical reasons, this file is *NOT* reloaded automatically when you use
 # 'bundle exec jekyll serve'. If you change this file, please restart the server process.
 #
 # If you need help with YAML syntax, here are some quick references for you:
@@ -18,30 +11,38 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
+# template for this file from here: https://github.com/jsanz/gh-pages-minima-starter/blob/master/_config.yml
 title: honestAFblog
+description: HonestAF's (Alex Friedrichsen's) Blog for poker magic data science gaming communication and more.
+author: "Alex Friedrichsen"
+
 email: alex.p.friedrichsen@gmail.com
-description: >- # this means to ignore newlines until "baseurl:"
-  HonestAF's (Alex Friedrichsen's) Blog for poker magic data science gaming communication and more.
+
 domain: alexanderfriedrichsen.github.io
 baseurl: "" # the subpath of your site, e.g. /blog (AF: might needs quotes)
 url: https://honestafblog.com # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: apfriedr
 github_username:  AlexanderFriedrichsen
-favicon16: /_site/assets/favicon-16x16.png
-favicon32: /_site/assets/favicon-32x32.png
-favicon48: /_site/assets/favicon-48x48.png
-favicon64: /_site/assets/favicon-64x64.png
-favicon128: /_site/assets/favicon-128x128.png
-favicon192: /_site/assets/favicon-192x192.png
-appleTouchIcon: /_site/assets/apple-touch-icon.png
+linkedin_username: alex-friedrichsen
+
+favicon16: /assets/favicon/favicon-16x16.png
+favicon32: /assets/favicon/favicon-32x32.png
+favicon192: /assets/favicon/android-chrome-192x192.png
+favicon512: /assets/favicon/android-chrome-512x512.png
+appleTouchIcon: /assets/favicon/apple-touch-icon.png
 
 
 # Build settings
 theme: minima
+show_excerpts: true
+minima:
+  date_format: "%Y-%m-%d"
+
 # remote_theme: pages-themes/cayman@v0.2.0
 plugins:
 #  - jekyll-remote-theme
   - jekyll-feed
+  - jekyll-seo-tag
 
 # Exclude from processing.
 # The following items will not be processed, by default.
@@ -51,14 +52,23 @@ plugins:
 # Excluded items can be processed by explicitly listing the directories or
 # their entries' file path in the `include:` list.
 #
-# exclude:
-#   - .sass-cache/
-#   - .jekyll-cache/
-#   - gemfiles/
-#   - Gemfile
-#   - Gemfile.lock
-#   - node_modules/
-#   - vendor/bundle/
-#   - vendor/cache/
-#   - vendor/gems/
-#   - vendor/ruby/
+
+header_pages:
+  - _pages/frontpage.md
+  - _pages/about.md
+  - _pages/archive.md
+
+include:
+  - _pages
+
+exclude:
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/

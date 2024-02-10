@@ -4,3 +4,13 @@
 
 layout: home
 ---
+# Link to [Portfolio](https://honestafblog.com/Portfolio)
+
+
+## This site is a work in progress. 
+Not all pages may function, and not all content is polished, up to date, or reflects my opinions. 
+Feel free to peruse for your amusement.
+
+Do not copy content from this site without explicit permission.
+
+Contact alex.p.friedrichsen@gmail.com

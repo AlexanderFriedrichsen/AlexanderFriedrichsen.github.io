@@ -2,7 +2,7 @@
 layout: post
 title:  "Global Entry"
 date:   2023-12-18 01:31:00 -0000
-categories: template, breakfast, travel
+categories: story, breakfast, travel
 ---
 Storytelling
 

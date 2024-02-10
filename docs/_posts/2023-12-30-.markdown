@@ -1,0 +1,25 @@
+---
+layout: post
+title:  ""
+date:   0000-00-00 00:00:00 -0000
+categories: template
+---
+
+# The Gingerdome
+Contrary to what you may immediately think, this was not a project concerned with pitting red-haired individuals against each other within a small arena in a fight to the death. It is about my experience constructing a geodesic dome from gingerbread this christmas. Four days prior to the holiday, we (my family, plus sister's partner) set out to bake our gingerbread dough pieces. While my dad made a sailboat, everyone else made a house. The dough was cooked 75% of the way through, then melted jolly rancher crystals added into the pan to melt into stained glass windows. Pretty! However, my work began with pen and paper.
+
+I had 1 pound of dough, give or take to work with. But of course, let's work in metric. Call it 450 grams. It's ok if we use estimates (rounding down). Inevitably, the dough will do its own thing and we can expect a margin of error. I wanted the dough pieces to be 0.5 cm thick. We also need the volume of the dough. I shaped it into as much of a cuboid as I could manage, measuring about 5x4x2 = 40cm^3. We also have the density of the dough now, 450/40 = 11.23 g/cm^3. 
+
+# Post topics: 
+- gingerbread dome
+- decks for manatraders series
+- Golden lady chords and voicings
+- Cognitive bias topics in harry potter and methods of rationality
+- first time watching LOTR
+- Year long reflection
+- how we divide up time
+
+# Golden Lady Piano Voicings
+Stevie Wonder's Innervisions and In The Key of Love come in tied for my favorite Stevie albums. Both iconic 70s vinyl jackets are immediately recognizable even 50 years later. The swirling orange concentricity and the warm faded yellow with anamorphic text bring Contusion, Don't You Worry Bout a Thing, and Higher Ground to life in our music brains. 
+Lately, I've been working on Golden Lady with piano and voice. I found a couple of nice videos and lead sheets to help me with the music, but in my current stage of jazz piano, I find it helpful to write out voicings in addition to chords when I want to be more precise. To be honest, I am most familiar with sheet music. But as any jazz musician can tell you, most of the time they aren't reading from a full score. Lucky little orchestra players.
+

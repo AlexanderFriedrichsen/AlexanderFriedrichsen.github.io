@@ -39,7 +39,7 @@ For each color pair, I'll examine:
 ### Gameplan
 The UW deck functions as a classic "skies" strategy, combining efficient flyers with ground defense and tempo plays.
 
-### Sample 3-0 Deck Analysis
+### 3-0 Deck Example
 ![UW 3-0 fliers](\assets\images\2024-11-20\UW_3-0.png)
 
 ### Overperformers
@@ -60,7 +60,7 @@ The UW deck functions as a classic "skies" strategy, combining efficient flyers 
 ### Gameplan
 The UB deck operates on a controlling axis while sometimes pivoting to a tempo gameplan.
 
-### Sample 3-0 Deck Analysis
+### 3-0 Deck Example
 ![UB 3-0](\assets\images\2024-11-20\UB_3-0.png)
 
 ### Overperformers
@@ -82,7 +82,7 @@ The UB deck operates on a controlling axis while sometimes pivoting to a tempo g
 ## UR
 ### Gameplan
 UR wants to get a threat early and then play card draw and efficient removal while pushing damage.
-### Sample 3-0 Deck Analysis
+### 3-0 Deck Example
 ![UR 3-0](\assets\images\2024-11-20\UR_3-0.png)
 
 ### Overperformers
@@ -105,7 +105,7 @@ UR wants to get a threat early and then play card draw and efficient removal whi
 ### Gameplan
 UG is one of the weaker color pairs, and part of this is due to the identity being slightly noncohesive. The archetype is present as a UG ramp, but in practice the set rewards curving out so heavily that your ramp threats can't always catch you up on tempo enough to recover. Heavy into either green is where you want to be.
 
-### Sample 3-0 Deck Analysis
+### 3-0 Deck Example
 ![UG 3-0](\assets\images\2024-11-20\UG_3-0.png)
 
 ### Overperformers
@@ -123,7 +123,7 @@ UG is one of the weaker color pairs, and part of this is due to the identity bei
 ### Gameplan
 BW is a strong color pair that focuses on life gain and fodder creatures, sometimes goign wide and sometimes playing an attrition game.
 
-### Sample 3-0 Deck Analysis
+### 3-0 Deck Example
 ![BW 3-0](\assets\images\2024-11-20\BW_3-0.png)
 
 ### Overperformers
@@ -144,7 +144,7 @@ BW is a strong color pair that focuses on life gain and fodder creatures, someti
 ### Gameplan
 Another weak color pair, BG is supposed to cneter around the morbid mechanic. Mechanics like these sometimes struggle in a synergy based set because they usually just happen through playing the game normally and cna't be hard built around. BG this set is no exception, and it plays like a good stuff archetype typically.
 
-### Sample 3-0 Deck Analysis
+### 3-0 Deck Example
 ![BG 3-0](\assets\images\2024-11-20\BG_3-0.png)
 
 ### Overperformers
@@ -166,7 +166,7 @@ Another weak color pair, BG is supposed to cneter around the morbid mechanic. Me
 ### Gameplan
 BR is deceptively not so much about attacking with the raid mechanic. It should be played more as a midrange and sacrifice deck that generates value while chipping damage.
 
-### Sample 3-0 Deck Analysis
+### 3-0 Deck Example
 ![BR 3-0](\assets\images\2024-11-20\BR_3-0.png)
 
 ### Overperformers
@@ -186,7 +186,7 @@ BR is deceptively not so much about attacking with the raid mechanic. It should 
 ### Gameplan
 Counters, but your spells still resolve. Go big, or go wide, but distribute carefully. GW is a high synergy archetype.
 
-### Sample 3-0 Deck Analysis
+### 3-0 Deck Example
 ![GW 3-0](\assets\images\2024-11-20\GW_3-0.png)
 
 ### Overperformers
@@ -206,7 +206,7 @@ Counters, but your spells still resolve. Go big, or go wide, but distribute care
 ### Gameplan
 The gruul mechanic is based on power 4 or greater, but like GB, this is usually something you don't have to work to hard for.
 
-### Sample 3-0 Deck Analysis
+### 3-0 Deck Example
 ![GR 3-0](\assets\images\2024-11-20\GR_3-0.png)
 
 ### Overperformers
@@ -227,7 +227,7 @@ The gruul mechanic is based on power 4 or greater, but like GB, this is usually 
 ### Gameplan
 WR is good ol' straightforward go wide tokens aggro. It relies heavily on synergy.
 
-### Sample 3-0 Deck Analysis
+### 3-0 Deck Example
 ![WR 3-0](\assets\images\2024-11-20\WR_3-0.png)
 
 ### Overperformers

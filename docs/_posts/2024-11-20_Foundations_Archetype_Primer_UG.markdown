@@ -35,8 +35,6 @@ For each color pair, I'll examine:
 ### Exceptions
 - It is possible to build UW heavier blue, leaning into tolarian terror and draw synergies.
 
-
-
 ## UW
 ### Gameplan
 The UW deck functions as a classic "skies" strategy, combining efficient flyers with ground defense and tempo plays.

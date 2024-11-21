@@ -11,7 +11,7 @@ categories: Draft, Limited, MTG, Strategy
 Magic Foundations brings us back to fundamentals with a core set-style draft environment focusing on two-color archetypes and battlefield-centric gameplay. We have escaped the haunted, convoluted rooms of Duskmourn. Now, it's time to slam a serra angel on 5 and hope it sticks.
 
 Or slam a doubly well fed craw wurm on 6 - *I'm looking at you, Quakestrider Ceratops*
-[Quakestrider Ceratops](\assets\images\2024-11-20\ceratops.jpg)
+![Quakestrider Ceratops](\assets\images\2024-11-20\ceratops.jpg)
 
 While I am certainly a proponent of complicated board states and intricate card interactions, it's refreshing to draft a set that doesn't ask too much, while bringing with it some of that cozy nostalgic feeling we all look for.
 
@@ -40,7 +40,7 @@ For each color pair, I'll examine:
 The UW deck functions as a classic "skies" strategy, combining efficient flyers with ground defense and tempo plays.
 
 ### Sample 3-0 Deck Analysis
-[UW 3-0 fliers](\assets\images\2024-11-20\UW_3-0.png)
+![UW 3-0 fliers](\assets\images\2024-11-20\UW_3-0.png)
 
 ### Overperformers
 - Luminous Rebuke
@@ -61,7 +61,7 @@ The UW deck functions as a classic "skies" strategy, combining efficient flyers 
 The UB deck operates on a controlling axis while sometimes pivoting to a tempo gameplan.
 
 ### Sample 3-0 Deck Analysis
-[UB 3-0](\assets\images\2024-11-20\UB_3-0.png)
+![UB 3-0](\assets\images\2024-11-20\UB_3-0.png)
 
 ### Overperformers
 - Bake into a Pie
@@ -83,7 +83,7 @@ The UB deck operates on a controlling axis while sometimes pivoting to a tempo g
 ### Gameplan
 UR wants to get a threat early and then play card draw and efficient removal while pushing damage.
 ### Sample 3-0 Deck Analysis
-[UR 3-0](\assets\images\2024-11-20\UR_3-0.png)
+![UR 3-0](\assets\images\2024-11-20\UR_3-0.png)
 
 ### Overperformers
 - Bigfin Bouncer
@@ -106,7 +106,7 @@ UR wants to get a threat early and then play card draw and efficient removal whi
 UG is one of the weaker color pairs, and part of this is due to the identity being slightly noncohesive. The archetype is present as a UG ramp, but in practice the set rewards curving out so heavily that your ramp threats can't always catch you up on tempo enough to recover. Heavy into either green is where you want to be.
 
 ### Sample 3-0 Deck Analysis
-[UG 3-0](\assets\images\2024-11-20\UG_3-0.png)
+![UG 3-0](\assets\images\2024-11-20\UG_3-0.png)
 
 ### Overperformers
 - Llanowar Elves
@@ -124,7 +124,7 @@ UG is one of the weaker color pairs, and part of this is due to the identity bei
 BW is a strong color pair that focuses on life gain and fodder creatures, sometimes goign wide and sometimes playing an attrition game.
 
 ### Sample 3-0 Deck Analysis
-[BW 3-0](\assets\images\2024-11-20\BW_3-0.png)
+![BW 3-0](\assets\images\2024-11-20\BW_3-0.png)
 
 ### Overperformers
 - Squad Rallier
@@ -145,7 +145,7 @@ BW is a strong color pair that focuses on life gain and fodder creatures, someti
 Another weak color pair, BG is supposed to cneter around the morbid mechanic. Mechanics like these sometimes struggle in a synergy based set because they usually just happen through playing the game normally and cna't be hard built around. BG this set is no exception, and it plays like a good stuff archetype typically.
 
 ### Sample 3-0 Deck Analysis
-[BG 3-0](\assets\images\2024-11-20\BG_3-0.png)
+![BG 3-0](\assets\images\2024-11-20\BG_3-0.png)
 
 ### Overperformers
 - Evolving Wilds
@@ -167,7 +167,7 @@ Another weak color pair, BG is supposed to cneter around the morbid mechanic. Me
 BR is deceptively not so much about attacking with the raid mechanic. It should be played more as a midrange and sacrifice deck that generates value while chipping damage.
 
 ### Sample 3-0 Deck Analysis
-[BR 3-0](\assets\images\2024-11-20\BR_3-0.png)
+![BR 3-0](\assets\images\2024-11-20\BR_3-0.png)
 
 ### Overperformers
 - Hungry Ghoul
@@ -187,7 +187,7 @@ BR is deceptively not so much about attacking with the raid mechanic. It should 
 Counters, but your spells still resolve. Go big, or go wide, but distribute carefully. GW is a high synergy archetype.
 
 ### Sample 3-0 Deck Analysis
-[GW 3-0](\assets\images\2024-11-20\GW_3-0.png)
+![GW 3-0](\assets\images\2024-11-20\GW_3-0.png)
 
 ### Overperformers
 - Banishing Light
@@ -207,7 +207,7 @@ Counters, but your spells still resolve. Go big, or go wide, but distribute care
 The gruul mechanic is based on power 4 or greater, but like GB, this is usually something you don't have to work to hard for.
 
 ### Sample 3-0 Deck Analysis
-[GR 3-0](\assets\images\2024-11-20\GR_3-0.png)
+![GR 3-0](\assets\images\2024-11-20\GR_3-0.png)
 
 ### Overperformers
 - Wary Thespian
@@ -228,7 +228,7 @@ The gruul mechanic is based on power 4 or greater, but like GB, this is usually 
 WR is good ol' straightforward go wide tokens aggro. It relies heavily on synergy.
 
 ### Sample 3-0 Deck Analysis
-[WR 3-0](\assets\images\2024-11-20\WR_3-0.png)
+![WR 3-0](\assets\images\2024-11-20\WR_3-0.png)
 
 ### Overperformers
 - Dazzling Angel

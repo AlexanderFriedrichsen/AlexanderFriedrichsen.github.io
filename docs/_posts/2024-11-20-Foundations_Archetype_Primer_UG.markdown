@@ -241,5 +241,6 @@ WR embodies classic go-wide token aggro, heavily dependent on synergy.
 3. GW - GR - WR
 4. GB - UR
 5. UG
+
 ## Conclusion
 Foundations rewards fundamental Magic skills, but a skilled player still has the tools to beat variance and come up on top most of the time. Drafting is more straightforward than usual given restrictive splashing and focused color pairs. Focus on curve, removal, and synergy over complicated combinations. Take on color dual lands highly. Gain an edge through knowing your gameplan, deck construction post draft, and playing towards your win condition.

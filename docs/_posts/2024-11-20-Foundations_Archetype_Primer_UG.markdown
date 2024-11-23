@@ -7,6 +7,8 @@ categories: Draft, Limited, MTG, Strategy
 
 # MTG Foundations Draft Guide: Color Pair Analysis and Winning Strategies
 
+This is HonestAF aka Alex Friedrichsen writing to you on a chilly Vermont mid-November day in the thick of stick season. Don't fret! Brisk weather is yet another excuse to stay inside and fire some drafts.
+
 ## Introduction
 Magic Foundations returns to fundamentals with a core set-style draft environment that focuses on two-color archetypes and battlefield-centric gameplay. We've escaped the haunted, convoluted rooms of Duskmourn. Now, it's time to slam a Serra Angel on turn 5 and hope it sticks.
 

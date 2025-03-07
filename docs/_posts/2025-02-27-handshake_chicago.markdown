@@ -2,7 +2,7 @@
 layout: post
 title:  "PT Chicago 2025"
 date:   2025-02-27 23:52:23 -0500
-categories: magic reflection optimization ai organization teams
+categories: magic,reflection,optimization,ai,organization,teams
 ---
 ### Chicago PT 2025:  Tournament Reflection
 ## What Went Right

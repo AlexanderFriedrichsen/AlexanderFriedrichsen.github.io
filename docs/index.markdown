@@ -8,7 +8,7 @@ layout: home
 
 
 ## This site is a work in progress. 
-Not all pages may function, and not all content is polished, up to date, or reflects my opinions. 
+Not all pages may function, and not all content is polished, up to date, or reflects opinions other than my own. 
 Feel free to peruse for your amusement.
 
 Do not copy content from this site without explicit permission.

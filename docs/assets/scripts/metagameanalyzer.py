@@ -45,6 +45,11 @@ class MetagameAnalyzer:
                 })
         return details
 
+    def get_meta_share(self, deck_name: str) -> float:
+        """Get the meta share percentage for a specific deck."""
+        return self.decks.get(deck_name, 0) * 100  
+
+
 # Example usage
 if __name__ == "__main__":
     # Create analyzer

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MTG Skill-Adjusted Meta Analyzer</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232733;
+    --border: #2d3142;
+    --text: #e4e4e7;
+    --text-muted: #9ca3af;
+    --accent: #818cf8;
+    --accent-dim: #4f46e5;
+    --green-strong: #166534;
+    --green-mid: #15803d;
+    --green-light: #22c55e;
+    --red-strong: #991b1b;
+    --red-mid: #dc2626;
+    --neutral: #374151;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  header p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .control-group label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  select, button {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  select:hover, button:hover {
+    border-color: var(--accent);
+    background: var(--surface);
+  }
+
+  button.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .toggle-group {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .toggle-group button {
+    border: none;
+    border-radius: 0;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .toggle-group button:not(:last-child) {
+    border-right: 1px solid var(--border);
+  }
+
+  .meta-info {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+
+  .meta-info span {
+    color: var(--text-muted);
+  }
+
+  .meta-info strong {
+    color: var(--text);
+  }
+
+  .matrix-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 700px;
+  }
+
+  th, td {
+    padding: 0.35rem 0.5rem;
+    text-align: center;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  th {
+    background: var(--surface2);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  th.row-header {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface2);
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.75rem;
+  }
+
+  th.corner {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+  }
+
+  .col-header {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    padding: 0.5rem 0.3rem;
+    min-height: 100px;
+    font-size: 0.72rem;
+    max-width: 32px;
+  }
+
+  td.mirror {
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  td.cell-value {
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: default;
+    position: relative;
+  }
+
+  td.cell-value .sample-size {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 400;
+    color: rgba(255,255,255,0.5);
+    line-height: 1;
+    margin-top: 1px;
+  }
+
+  td.low-sample {
+    opacity: 0.5;
+  }
+
+  td.no-data {
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  .overall-col {
+    font-weight: 700;
+    background: var(--surface2) !important;
+    border-left: 2px solid var(--accent-dim);
+  }
+
+  .stats-row {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  .methodology {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .methodology h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: var(--accent);
+  }
+
+  .methodology h3 {
+    font-size: 0.95rem;
+    margin: 1rem 0 0.5rem;
+    color: var(--text);
+  }
+
+  .methodology p, .methodology li {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .methodology ul {
+    padding-left: 1.5rem;
+  }
+
+  .methodology code {
+    background: var(--surface2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.8rem;
+  }
+
+  footer {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  footer a:hover {
+    text-decoration: underline;
+  }
+
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .legend-bar {
+    display: flex;
+    height: 14px;
+    width: 200px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .legend-bar span {
+    flex: 1;
+  }
+
+  @media (max-width: 768px) {
+    .container { padding: 1rem; }
+    header h1 { font-size: 1.3rem; }
+    .controls { flex-direction: column; align-items: stretch; }
+    th, td { font-size: 0.7rem; padding: 0.25rem 0.35rem; }
+    .col-header { min-height: 80px; font-size: 0.65rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>MTG Skill-Adjusted Meta Analyzer</h1>
+    <p>Archetype matchup matrices with ELO-based skill adjustments from tournament data</p>
+  </header>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Format</label>
+      <select id="formatSelect"></select>
+    </div>
+    <div class="control-group">
+      <label>View</label>
+      <div class="toggle-group">
+        <button id="btnRaw" class="active" onclick="setMode('raw')">Raw Win %</button>
+        <button id="btnAdj" onclick="setMode('adjusted')">Skill-Adjusted</button>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Min Sample</label>
+      <select id="minSampleSelect">
+        <option value="0">All</option>
+        <option value="3">3+</option>
+        <option value="5" selected>5+</option>
+        <option value="10">10+</option>
+        <option value="20">20+</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="metaInfo" class="meta-info"></div>
+
+  <div class="legend">
+    <span>Unfavorable</span>
+    <div class="legend-bar">
+      <span style="background:#991b1b"></span>
+      <span style="background:#b91c1c"></span>
+      <span style="background:#dc2626"></span>
+      <span style="background:#6b7280"></span>
+      <span style="background:#16a34a"></span>
+      <span style="background:#15803d"></span>
+      <span style="background:#166534"></span>
+    </div>
+    <span>Favorable</span>
+    <span style="margin-left: 1rem; font-style: italic;">Faded cells = low sample size</span>
+  </div>
+
+  <div class="matrix-wrapper">
+    <table id="matrixTable"></table>
+  </div>
+
+  <div class="methodology">
+    <h2>Methodology</h2>
+
+    <h3>Data Sources</h3>
+    <p>Tournament data comes from <a href="https://github.com/j6e/mtg-meta-analyzer" style="color:var(--accent)">MTG Meta Analyzer</a> (MIT license),
+    which aggregates match results from melee.gg (tabletop) and MTGO (online) events.
+    Player skill ratings are sourced from <a href="https://mtgeloproject.net" style="color:var(--accent)">MTG ELO Project</a>.</p>
+
+    <h3>Archetype Classification</h3>
+    <p>Decks are classified into archetypes using signature card matching. Each archetype is defined by a set of required cards and minimum copy counts.
+    Decklists matching all signature cards are assigned to that archetype. Unclassified decks are excluded from the matrix.</p>
+
+    <h3>Skill Adjustment</h3>
+    <p>The skill-adjusted view accounts for player strength differences using ELO ratings:</p>
+    <ul>
+      <li>Each player is matched to their ELO rating from mtgeloproject.net (top ~200 competitive players). Unmatched players default to 1500 ELO.</li>
+      <li>For each match, the <em>expected</em> win probability is calculated from the ELO difference: <code>E = 1 / (1 + 10^((R_opp - R_player) / 400))</code></li>
+      <li>The <em>residual</em> (actual result minus expected result) is computed. A positive residual means the archetype outperformed what skill alone predicted.</li>
+      <li>The skill-adjusted win rate = 50% + average residual across all matches in that cell.</li>
+      <li>This removes the bias where strong players inflate their deck's apparent win rate.</li>
+    </ul>
+
+    <h3>Limitations</h3>
+    <ul>
+      <li>ELO data covers only ~200 top professional players. Most tournament players default to 1500 ELO, so skill adjustment is most impactful for formats with many tabletop (melee.gg) events featuring known pros.</li>
+      <li>MTGO tournaments use usernames that cannot be matched to ELO ratings, so those players always default to 1500.</li>
+      <li>Small sample sizes (shown in each cell) mean high variance. Cells with fewer than 5 matches are faded.</li>
+      <li>Mirror matches are excluded from the matrix.</li>
+    </ul>
+
+    <h3>How to Read the Matrix</h3>
+    <p>Each cell shows the win rate of the <strong>row</strong> archetype against the <strong>column</strong> archetype.
+    Green = favorable matchup (>50%), Red = unfavorable (<50%). The number below is the match count.
+    The rightmost column shows the archetype's overall non-mirror win rate.</p>
+  </div>
+
+  <footer>
+    <p>Data: <a href="https://github.com/j6e/mtg-meta-analyzer">MTG Meta Analyzer</a> (MIT) &middot;
+    ELO: <a href="https://mtgeloproject.net">MTG ELO Project</a> &middot;
+    Built by <a href="https://honestafblog.com">Alex Friedrichsen</a></p>
+    <p style="margin-top: 0.5rem;">Data reflects tournaments from Jan&ndash;Mar 2026. Last updated March 17, 2026.</p>
+  </footer>
+</div>
+
+<script>
+const DATA = [{"format":"Modern","archetypes":["Boros Energy","Ruby Storm","Eldrazi Tron","Jeskai Blink","Izzet Affinity","Domain Zoo","Amulet Titan","Izzet Prowess","Dimir Midrange","Simic Neoform","Living End","Azorius Control","Esper Reanimator","Mono-Blue Belcher","Gruul Eldrazi Ramp"],"rawMatrix":[[null,52.1,62.2,39.2,52.5,57.6,53.6,64.8,50.0,30.8,48.1,55.8,43.9,44.4,45.5],[47.9,null,48.0,66.7,53.3,39.1,42.9,53.3,38.5,40.0,55.6,50.0,41.7,26.9,100.0],[37.8,52.0,null,50.0,39.3,41.2,55.6,62.5,28.6,42.9,null,80.0,44.4,42.9,50.0],[60.8,33.3,50.0,null,40.0,57.1,42.0,45.0,50.0,62.5,50.0,25.0,50.0,41.7,18.8],[47.5,46.7,60.7,60.0,null,57.1,40.0,47.4,57.1,27.3,71.4,54.2,66.7,77.8,46.7],[42.4,60.9,58.8,42.9,42.9,null,57.5,68.8,71.4,50.0,71.4,100.0,50.0,57.1,25.0],[46.4,57.1,44.4,58.0,60.0,42.5,null,66.7,37.5,16.7,40.0,66.7,54.5,12.5,83.3],[35.2,46.7,37.5,55.0,52.6,31.2,33.3,null,33.3,28.6,50.0,60.0,35.7,55.6,25.0],[50.0,61.5,71.4,50.0,42.9,28.6,62.5,66.7,null,100.0,40.0,100.0,75.0,20.0,50.0],[69.2,60.0,57.1,37.5,72.7,50.0,83.3,71.4,0.0,null,50.0,50.0,100.0,12.5,85.7],[51.9,44.4,null,50.0,28.6,28.6,60.0,50.0,60.0,50.0,null,66.7,37.5,50.0,100.0],[44.2,50.0,20.0,75.0,45.8,0.0,33.3,40.0,0.0,50.0,33.3,null,66.7,40.0,50.0],[56.1,58.3,55.6,50.0,33.3,50.0,45.5,64.3,25.0,0.0,62.5,33.3,null,25.0,50.0],[55.6,73.1,57.1,58.3,22.2,42.9,87.5,44.4,80.0,87.5,50.0,60.0,75.0,null,40.0],[54.5,0.0,50.0,81.2,53.3,75.0,16.7,75.0,50.0,14.3,0.0,50.0,50.0,60.0,null]],"adjustedMatrix":[[null,52.1,62.2,39.2,52.5,57.6,53.6,64.8,50.0,30.8,48.1,55.8,43.9,44.4,45.5],[47.9,null,48.0,66.7,53.3,39.1,42.9,53.3,38.5,40.0,55.6,50.0,41.7,26.9,100.0],[37.8,52.0,null,50.0,39.3,41.2,55.6,62.5,28.6,42.9,null,80.0,44.4,42.9,50.0],[60.8,33.3,50.0,null,40.0,57.1,42.0,45.0,50.0,62.5,50.0,25.0,50.0,41.7,18.8],[47.5,46.7,60.7,60.0,null,57.1,40.0,47.4,57.1,27.3,71.4,54.2,66.7,77.8,46.7],[42.4,60.9,58.8,42.9,42.9,null,57.5,68.8,71.4,50.0,71.4,100.0,50.0,57.1,25.0],[46.4,57.1,44.4,58.0,60.0,42.5,null,66.7,37.5,16.7,40.0,66.7,54.5,12.5,83.3],[35.2,46.7,37.5,55.0,52.6,31.2,33.3,null,33.3,28.6,50.0,60.0,35.7,55.6,25.0],[50.0,61.5,71.4,50.0,42.9,28.6,62.5,66.7,null,100.0,40.0,100.0,75.0,20.0,50.0],[69.2,60.0,57.1,37.5,72.7,50.0,83.3,71.4,0.0,null,50.0,50.0,100.0,12.5,85.7],[51.9,44.4,null,50.0,28.6,28.6,60.0,50.0,60.0,50.0,null,66.7,37.5,50.0,100.0],[44.2,50.0,20.0,75.0,45.8,0.0,33.3,40.0,0.0,50.0,33.3,null,66.7,40.0,50.0],[56.1,58.3,55.6,50.0,33.3,50.0,45.5,64.3,25.0,0.0,62.5,33.3,null,25.0,50.0],[55.6,73.1,57.1,58.3,22.2,42.9,87.5,44.4,80.0,87.5,50.0,60.0,75.0,null,40.0],[54.5,0.0,50.0,81.2,53.3,75.0,16.7,75.0,50.0,14.3,0.0,50.0,50.0,60.0,null]],"sampleSizes":[[0,71,45,60,59,66,28,61,23,26,26,26,33,27,33],[71,0,25,24,30,23,14,15,13,5,9,6,12,13,6],[45,25,0,16,28,17,9,8,7,7,0,5,9,7,8],[60,24,16,0,20,21,25,20,10,8,6,14,11,12,8],[59,30,28,20,0,21,15,19,14,11,7,12,21,9,15],[66,23,17,21,21,0,20,16,7,8,7,4,10,7,10],[28,14,9,25,15,20,0,12,8,6,5,3,11,8,6],[61,15,8,20,19,16,12,0,3,7,2,5,14,9,4],[23,13,7,10,14,7,8,3,0,2,5,4,6,5,3],[26,5,7,8,11,8,6,7,2,0,4,3,3,8,7],[26,9,0,6,7,7,5,2,5,4,0,3,8,2,4],[26,6,5,14,12,4,3,5,4,3,3,0,6,5,6],[33,12,9,11,21,10,11,14,6,3,8,6,0,8,6],[27,13,7,12,9,7,8,9,5,8,2,5,8,0,5],[33,6,8,8,15,10,6,4,3,7,4,6,6,5,0]],"stats":[{"name":"Boros Energy","playerCount":861,"overallWinrate":51.4,"totalMatches":584},{"name":"Ruby Storm","playerCount":385,"overallWinrate":49.1,"totalMatches":266},{"name":"Eldrazi Tron","playerCount":319,"overallWinrate":45.0,"totalMatches":191},{"name":"Jeskai Blink","playerCount":300,"overallWinrate":47.3,"totalMatches":255},{"name":"Izzet Affinity","playerCount":278,"overallWinrate":52.8,"totalMatches":281},{"name":"Domain Zoo","playerCount":222,"overallWinrate":51.5,"totalMatches":237},{"name":"Amulet Titan","playerCount":190,"overallWinrate":50.0,"totalMatches":170},{"name":"Izzet Prowess","playerCount":177,"overallWinrate":40.8,"totalMatches":195},{"name":"Dimir Midrange","playerCount":161,"overallWinrate":54.1,"totalMatches":110},{"name":"Simic Neoform","playerCount":152,"overallWinrate":60.5,"totalMatches":105},{"name":"Living End","playerCount":136,"overallWinrate":49.4,"totalMatches":88},{"name":"Azorius Control","playerCount":133,"overallWinrate":45.1,"totalMatches":102},{"name":"Esper Reanimator","playerCount":130,"overallWinrate":47.8,"totalMatches":158},{"name":"Mono-Blue Belcher","playerCount":121,"overallWinrate":59.6,"totalMatches":125},{"name":"Gruul Eldrazi Ramp","playerCount":111,"overallWinrate":49.2,"totalMatches":121}],"meta":{"totalPlayers":5161,"eloMatchedPlayers":0,"eloMatchRate":0.0,"totalMatches":2157,"tournamentCount":139}},{"format":"Standard","archetypes":["Izzet Lessons","Simic Rhythm","Mono-Green Landfall","Dimir Midrange","Izzet Prowess","Jeskai Control","Mono-Red Aggro","Sultai Reanimator","Dimir Excruciator","Izzet Spellementals","Bant Airbending","Azorius Tempo","Boros Dragons","Izzet Elementals","Temur Harmonizer"],"rawMatrix":[[null,50.4,44.9,56.7,47.0,58.1,42.1,47.6,60.0,53.8,52.0,38.3,56.9,41.2,49.1],[49.6,null,64.7,58.1,39.2,40.6,46.0,63.7,46.7,22.6,45.8,44.9,32.2,34.4,43.2],[55.1,35.3,null,58.0,45.7,76.1,72.9,59.2,63.0,59.8,35.6,65.4,51.0,59.8,47.8],[43.3,41.9,42.0,null,39.9,57.6,45.2,54.9,57.1,56.0,46.5,62.9,37.2,54.7,67.1],[53.0,60.8,54.3,60.1,null,64.0,43.9,70.0,59.2,39.2,60.0,40.8,54.4,59.3,54.0],[41.9,59.4,23.9,42.4,36.0,null,42.9,56.0,31.9,50.0,49.0,34.3,57.8,30.0,27.8],[57.9,54.0,27.1,54.8,56.1,57.1,null,37.9,45.8,51.0,45.7,63.7,42.5,41.4,30.0],[52.4,36.3,40.8,45.1,30.0,44.0,62.1,null,29.0,44.2,37.4,59.5,62.1,50.0,31.2],[40.0,53.3,37.0,42.9,40.8,68.1,54.2,71.0,null,59.5,56.0,48.6,57.6,59.5,39.2],[46.2,77.4,40.2,44.0,60.8,50.0,49.0,55.8,40.5,null,64.6,57.2,57.6,19.0,54.5],[48.0,54.2,64.4,53.5,40.0,51.0,54.3,62.6,44.0,35.4,null,61.1,30.3,57.1,38.7],[61.7,55.1,34.6,37.1,59.2,65.7,36.2,40.5,51.4,42.8,38.9,null,58.8,51.0,79.1],[43.1,67.8,49.0,62.8,45.6,42.2,57.5,37.9,42.4,42.4,69.7,41.2,null,60.5,48.6],[58.8,65.6,40.2,45.3,40.7,70.0,58.6,50.0,40.5,81.0,42.9,49.0,39.5,null,55.7],[50.9,56.8,52.2,32.9,46.0,72.2,70.0,68.8,60.8,45.5,61.3,20.9,51.4,44.3,null]],"adjustedMatrix":[[null,50.2,42.9,54.7,46.9,57.3,40.5,46.3,60.2,54.2,52.6,40.2,54.7,40.5,48.3],[49.8,null,63.7,57.0,40.9,39.1,44.3,61.5,50.7,30.8,46.6,45.3,32.2,35.1,41.8],[57.1,36.3,null,57.7,47.1,76.2,72.5,57.9,63.1,60.2,36.0,65.7,50.1,61.2,47.8],[45.3,43.0,42.3,null,40.8,57.8,44.9,54.9,56.9,57.0,45.9,63.8,37.2,54.1,69.1],[53.1,59.1,52.9,59.2,null,64.8,41.0,69.1,59.2,39.1,60.9,40.0,53.6,57.7,51.3],[42.7,60.9,23.8,42.2,35.2,null,41.9,56.0,36.7,53.0,50.9,35.1,56.8,31.2,29.1],[59.5,55.7,27.5,55.1,59.0,58.1,null,37.4,46.5,51.9,47.6,63.7,42.5,44.6,30.0],[53.7,38.5,42.1,45.1,30.9,44.0,62.6,null,30.9,52.3,42.6,61.8,62.1,55.3,37.3],[39.8,49.3,36.9,43.1,40.8,63.3,53.5,69.1,null,63.0,55.4,46.8,56.2,58.2,40.1],[45.8,69.2,39.8,43.0,60.9,47.0,48.1,47.7,37.0,null,62.5,57.9,56.1,19.7,57.9],[47.4,53.4,64.0,54.1,39.1,49.1,52.4,57.4,44.6,37.5,null,62.1,26.1,51.9,38.7],[59.8,54.7,34.3,36.2,60.0,64.9,36.2,38.2,53.2,42.1,37.9,null,58.8,52.0,80.8],[45.3,67.8,49.9,62.8,46.4,43.2,57.5,37.9,43.8,43.9,73.9,41.2,null,60.5,48.6],[59.5,64.9,38.8,45.9,42.3,68.8,55.4,44.7,41.8,80.3,48.1,48.0,39.5,null,54.4],[51.7,58.2,52.2,30.9,48.7,70.9,70.0,62.7,59.9,42.1,61.3,19.2,51.4,45.6,null]],"sampleSizes":[[0,933,640,620,466,412,285,316,291,250,247,193,153,136,111],[933,0,334,447,167,376,214,296,137,146,201,108,90,64,66],[640,334,0,358,514,174,140,109,238,255,104,172,96,97,93],[620,447,358,0,257,218,157,142,198,133,100,105,74,75,73],[466,167,514,257,0,57,98,50,233,250,85,125,57,86,87],[412,376,174,218,57,0,98,134,58,37,97,54,45,40,18],[285,214,140,157,98,98,0,95,59,51,46,40,40,29,30],[316,296,109,142,50,134,95,0,50,52,115,42,29,26,32],[291,137,238,198,233,58,59,50,0,116,58,105,66,79,74],[250,146,255,133,250,37,51,52,116,0,48,76,59,63,55],[247,201,104,100,85,97,46,115,58,48,0,54,33,35,31],[193,108,172,105,125,54,40,42,105,76,54,0,51,49,55],[153,90,96,74,57,45,40,29,66,59,33,51,0,38,37],[136,64,97,75,86,40,29,26,79,63,35,49,38,0,35],[111,66,93,73,87,18,30,32,74,55,31,55,37,35,0]],"stats":[{"name":"Izzet Lessons","playerCount":1716,"overallWinrate":50.4,"totalMatches":5053},{"name":"Simic Rhythm","playerCount":1303,"overallWinrate":49.2,"totalMatches":3579},{"name":"Mono-Green Landfall","playerCount":968,"overallWinrate":54.6,"totalMatches":3324},{"name":"Dimir Midrange","playerCount":895,"overallWinrate":47.4,"totalMatches":2957},{"name":"Izzet Prowess","playerCount":773,"overallWinrate":53.9,"totalMatches":2532},{"name":"Jeskai Control","playerCount":633,"overallWinrate":44.7,"totalMatches":1818},{"name":"Mono-Red Aggro","playerCount":511,"overallWinrate":49.9,"totalMatches":1382},{"name":"Sultai Reanimator","playerCount":459,"overallWinrate":44.4,"totalMatches":1488},{"name":"Dimir Excruciator","playerCount":458,"overallWinrate":47.2,"totalMatches":1762},{"name":"Izzet Spellementals","playerCount":450,"overallWinrate":51.0,"totalMatches":1591},{"name":"Bant Airbending","playerCount":347,"overallWinrate":51.5,"totalMatches":1254},{"name":"Azorius Tempo","playerCount":310,"overallWinrate":50.8,"totalMatches":1229},{"name":"Boros Dragons","playerCount":281,"overallWinrate":50.4,"totalMatches":868},{"name":"Izzet Elementals","playerCount":261,"overallWinrate":52.2,"totalMatches":852},{"name":"Temur Harmonizer","playerCount":249,"overallWinrate":49.9,"totalMatches":797}],"meta":{"totalPlayers":14417,"eloMatchedPlayers":179,"eloMatchRate":1.2,"totalMatches":23200,"tournamentCount":161}},{"format":"Legacy","archetypes":["Dimir Tempo","Oops! All Spells","Izzet Delver","Boros Energy","Mono-Red Eldrazi","Sneak and Show","Izzet Affinity","Bant Beanstalk","Lands","Tendrils Storm","Omni-Tell","Sultai Doomsday","Death and Taxes (Yorion)","Cradle Control","Painter Combo"],"rawMatrix":[[null,56.5,58.9,29.0,54.2,63.8,37.5,42.6,45.8,58.8,42.9,53.8,39.3,45.8,45.5],[43.5,null,50.0,75.0,80.0,33.3,66.7,100.0,12.5,80.0,75.0,33.3,80.0,0.0,83.3],[41.1,50.0,null,0.0,61.5,25.0,43.8,77.8,44.4,50.0,16.7,16.7,33.3,41.7,66.7],[71.0,25.0,100.0,null,53.3,63.6,80.0,57.1,33.3,28.6,50.0,55.6,60.0,66.7,50.0],[45.8,20.0,38.5,46.7,null,37.5,62.5,55.0,57.1,50.0,83.3,57.1,50.0,33.3,0.0],[36.2,66.7,75.0,36.4,62.5,null,20.0,60.0,62.5,75.0,40.0,20.0,27.8,75.0,80.0],[62.5,33.3,56.2,20.0,37.5,80.0,null,70.0,27.3,50.0,66.7,70.0,33.3,16.7,25.0],[57.4,0.0,22.2,42.9,45.0,40.0,30.0,null,66.7,56.2,50.0,50.0,50.0,40.0,75.0],[54.2,87.5,55.6,66.7,42.9,37.5,72.7,33.3,null,40.0,75.0,66.7,0.0,100.0,50.0],[41.2,20.0,50.0,71.4,50.0,25.0,50.0,43.8,60.0,null,50.0,20.0,0.0,33.3,100.0],[57.1,25.0,83.3,50.0,16.7,60.0,33.3,50.0,25.0,50.0,null,50.0,50.0,66.7,50.0],[46.2,66.7,83.3,44.4,42.9,80.0,30.0,50.0,33.3,80.0,50.0,null,66.7,33.3,66.7],[60.7,20.0,66.7,40.0,50.0,72.2,66.7,50.0,100.0,100.0,50.0,33.3,null,66.7,0.0],[54.2,100.0,58.3,33.3,66.7,25.0,83.3,60.0,0.0,66.7,33.3,66.7,33.3,null,100.0],[54.5,16.7,33.3,50.0,100.0,20.0,75.0,25.0,50.0,0.0,50.0,33.3,100.0,0.0,null]],"adjustedMatrix":[[null,56.5,58.9,29.0,54.2,63.8,37.5,45.4,45.8,58.8,42.9,53.8,39.3,45.8,45.5],[43.5,null,50.0,75.0,80.0,33.3,66.7,100.0,12.5,80.0,75.0,33.3,80.0,0.0,83.3],[41.1,50.0,null,0.0,61.5,25.0,43.8,77.8,44.4,50.0,16.7,16.7,33.3,41.7,66.7],[71.0,25.0,100.0,null,53.3,63.6,80.0,57.1,33.3,28.6,50.0,55.6,60.0,66.7,50.0],[45.8,20.0,38.5,46.7,null,37.5,62.5,59.6,57.1,50.0,83.3,57.1,50.0,33.3,0.0],[36.2,66.7,75.0,36.4,62.5,null,20.0,60.0,62.5,75.0,40.0,20.0,27.8,75.0,80.0],[62.5,33.3,56.2,20.0,37.5,80.0,null,70.0,27.3,50.0,66.7,70.0,33.3,16.7,25.0],[54.6,0.0,22.2,42.9,40.4,40.0,30.0,null,66.7,56.2,26.8,44.2,34.5,40.0,75.0],[54.2,87.5,55.6,66.7,42.9,37.5,72.7,33.3,null,40.0,75.0,66.7,0.0,100.0,50.0],[41.2,20.0,50.0,71.4,50.0,25.0,50.0,43.8,60.0,null,50.0,20.0,0.0,33.3,100.0],[57.1,25.0,83.3,50.0,16.7,60.0,33.3,73.2,25.0,50.0,null,50.0,50.0,66.7,50.0],[46.2,66.7,83.3,44.4,42.9,80.0,30.0,55.8,33.3,80.0,50.0,null,66.7,33.3,66.7],[60.7,20.0,66.7,40.0,50.0,72.2,66.7,65.5,100.0,100.0,50.0,33.3,null,66.7,0.0],[54.2,100.0,58.3,33.3,66.7,25.0,83.3,60.0,0.0,66.7,33.3,66.7,33.3,null,100.0],[54.5,16.7,33.3,50.0,100.0,20.0,75.0,25.0,50.0,0.0,50.0,33.3,100.0,0.0,null]],"sampleSizes":[[0,23,28,31,24,29,20,34,24,17,21,26,14,24,11],[23,0,8,4,5,3,6,4,8,5,4,6,5,2,6],[28,8,0,6,13,8,8,9,9,2,6,6,12,6,6],[31,4,6,0,15,11,10,7,6,7,4,9,5,3,2],[24,5,13,15,0,8,8,10,7,4,6,7,4,6,2],[29,3,8,11,8,0,5,10,8,4,5,5,9,4,5],[20,6,8,10,8,5,0,10,11,4,6,10,6,12,4],[34,4,9,7,10,10,10,0,9,8,6,8,3,5,4],[24,8,9,6,7,8,11,9,0,5,4,3,4,2,2],[17,5,2,7,4,4,4,8,5,0,4,5,1,3,1],[21,4,6,4,6,5,6,6,4,4,0,8,4,6,2],[26,6,6,9,7,5,10,8,3,5,8,0,6,3,3],[14,5,12,5,4,9,6,3,4,1,4,6,0,3,2],[24,2,6,3,6,4,12,5,2,3,6,3,3,0,1],[11,6,6,2,2,5,4,4,2,1,2,3,2,1,0]],"stats":[{"name":"Dimir Tempo","playerCount":367,"overallWinrate":48.3,"totalMatches":326},{"name":"Oops! All Spells","playerCount":155,"overallWinrate":55.1,"totalMatches":89},{"name":"Izzet Delver","playerCount":138,"overallWinrate":42.1,"totalMatches":127},{"name":"Boros Energy","playerCount":123,"overallWinrate":60.8,"totalMatches":120},{"name":"Mono-Red Eldrazi","playerCount":121,"overallWinrate":47.5,"totalMatches":119},{"name":"Sneak and Show","playerCount":107,"overallWinrate":48.2,"totalMatches":114},{"name":"Izzet Affinity","playerCount":94,"overallWinrate":46.7,"totalMatches":120},{"name":"Bant Beanstalk","playerCount":87,"overallWinrate":47.2,"totalMatches":127},{"name":"Lands","playerCount":87,"overallWinrate":54.9,"totalMatches":102},{"name":"Tendrils Storm","playerCount":87,"overallWinrate":43.6,"totalMatches":70},{"name":"Omni-Tell","playerCount":72,"overallWinrate":50.0,"totalMatches":86},{"name":"Sultai Doomsday","playerCount":70,"overallWinrate":52.4,"totalMatches":105},{"name":"Death and Taxes (Yorion)","playerCount":67,"overallWinrate":57.1,"totalMatches":78},{"name":"Cradle Control","playerCount":46,"overallWinrate":56.9,"totalMatches":80},{"name":"Painter Combo","playerCount":39,"overallWinrate":43.1,"totalMatches":51}],"meta":{"totalPlayers":2357,"eloMatchedPlayers":2,"eloMatchRate":0.1,"totalMatches":1139,"tournamentCount":65}},{"format":"Pauper","archetypes":["Mono-Red Burn","Mono-Blue Terror","Mono-Green Elves","Grixis Affinity","Jund Wildfire","Mono-Red Rally","Golgari Gardens","Rakdos Madness Burn","Gruul Ramp","Mono-Blue Faeries","Golgari Spy Combo","Azorius Caw-Gates","Mono-White Aggro","Azorius Familiars","Dimir Terror"],"rawMatrix":[[null,44.7,85.7,45.7,48.1,30.8,50.0,47.4,57.1,50.0,60.0,43.8,44.4,41.7,44.4],[55.3,null,38.0,42.9,38.2,47.4,38.5,50.0,30.0,25.0,50.0,46.4,25.0,40.9,30.0],[14.3,62.0,null,62.5,62.0,45.5,46.2,91.7,42.9,60.0,60.0,75.0,62.5,46.4,75.0],[54.3,57.1,37.5,null,47.2,30.8,47.1,50.0,60.0,25.0,28.6,35.7,50.0,37.5,25.0],[51.9,61.8,38.0,52.8,null,79.2,72.2,65.0,58.3,50.0,55.6,65.0,43.3,50.0,57.1],[69.2,52.6,54.5,69.2,20.8,null,55.6,76.9,25.0,14.3,33.3,22.2,20.0,100.0,0.0],[50.0,61.5,53.8,52.9,27.8,44.4,null,83.3,66.7,64.3,100.0,16.7,71.4,25.0,33.3],[52.6,50.0,8.3,50.0,35.0,23.1,16.7,null,80.0,33.3,44.4,50.0,0.0,83.3,0.0],[42.9,70.0,57.1,40.0,41.7,75.0,33.3,20.0,null,75.0,20.0,78.6,61.5,87.5,0.0],[50.0,75.0,40.0,75.0,50.0,85.7,35.7,66.7,25.0,null,66.7,40.0,80.0,100.0,10.0],[40.0,50.0,40.0,71.4,44.4,66.7,0.0,55.6,80.0,33.3,null,50.0,40.0,50.0,50.0],[56.2,53.6,25.0,64.3,35.0,77.8,83.3,50.0,21.4,60.0,50.0,null,66.7,25.0,83.3],[55.6,75.0,37.5,50.0,56.7,80.0,28.6,100.0,38.5,20.0,60.0,33.3,null,20.0,0.0],[58.3,59.1,53.6,62.5,50.0,0.0,75.0,16.7,12.5,0.0,50.0,75.0,80.0,null,0.0],[55.6,70.0,25.0,75.0,42.9,100.0,66.7,100.0,100.0,90.0,50.0,16.7,100.0,100.0,null]],"adjustedMatrix":[[null,44.7,85.7,45.7,48.1,30.8,50.0,47.4,57.1,50.0,60.0,43.8,44.4,41.7,44.4],[55.3,null,38.0,42.9,38.2,47.4,38.5,50.0,30.0,25.0,50.0,46.4,25.0,40.9,30.0],[14.3,62.0,null,62.5,62.0,45.5,46.2,91.7,42.9,60.0,60.0,75.0,62.5,46.4,75.0],[54.3,57.1,37.5,null,47.2,30.8,47.1,50.0,60.0,25.0,28.6,35.7,50.0,37.5,25.0],[51.9,61.8,38.0,52.8,null,79.2,72.2,65.0,58.3,50.0,55.6,65.0,43.3,50.0,57.1],[69.2,52.6,54.5,69.2,20.8,null,55.6,76.9,25.0,14.3,33.3,22.2,20.0,100.0,0.0],[50.0,61.5,53.8,52.9,27.8,44.4,null,83.3,66.7,64.3,100.0,16.7,71.4,25.0,33.3],[52.6,50.0,8.3,50.0,35.0,23.1,16.7,null,80.0,33.3,44.4,50.0,0.0,83.3,0.0],[42.9,70.0,57.1,40.0,41.7,75.0,33.3,20.0,null,75.0,20.0,78.6,61.5,87.5,0.0],[50.0,75.0,40.0,75.0,50.0,85.7,35.7,66.7,25.0,null,66.7,40.0,80.0,100.0,10.0],[40.0,50.0,40.0,71.4,44.4,66.7,0.0,55.6,80.0,33.3,null,50.0,40.0,50.0,50.0],[56.2,53.6,25.0,64.3,35.0,77.8,83.3,50.0,21.4,60.0,50.0,null,66.7,25.0,83.3],[55.6,75.0,37.5,50.0,56.7,80.0,28.6,100.0,38.5,20.0,60.0,33.3,null,20.0,0.0],[58.3,59.1,53.6,62.5,50.0,0.0,75.0,16.7,12.5,0.0,50.0,75.0,80.0,null,0.0],[55.6,70.0,25.0,75.0,42.9,100.0,66.7,100.0,100.0,90.0,50.0,16.7,100.0,100.0,null]],"sampleSizes":[[0,38,28,35,26,26,22,19,14,16,15,16,9,12,9],[38,0,25,28,17,19,13,14,10,16,14,14,16,11,5],[28,25,0,16,25,11,13,12,7,10,5,4,8,14,4],[35,28,16,0,18,13,17,8,10,12,7,14,7,8,6],[26,17,25,18,0,12,9,10,12,10,9,10,15,14,7],[26,19,11,13,12,0,9,13,12,14,3,9,5,2,1],[22,13,13,17,9,9,0,6,9,7,2,6,7,4,3],[19,14,12,8,10,13,6,0,5,6,9,6,1,6,2],[14,10,7,10,12,12,9,5,0,4,5,7,13,4,1],[16,16,10,12,10,14,7,6,4,0,3,5,5,1,5],[15,14,5,7,9,3,2,9,5,3,0,4,5,2,4],[16,14,4,14,10,9,6,6,7,5,4,0,6,4,3],[9,16,8,7,15,5,7,1,13,5,5,6,0,5,1],[12,11,14,8,14,2,4,6,4,1,2,4,5,0,4],[9,5,4,6,7,1,3,2,1,5,4,3,1,4,0]],"stats":[{"name":"Mono-Red Burn","playerCount":195,"overallWinrate":50.0,"totalMatches":285},{"name":"Mono-Blue Terror","playerCount":193,"overallWinrate":41.9,"totalMatches":240},{"name":"Mono-Green Elves","playerCount":161,"overallWinrate":53.0,"totalMatches":182},{"name":"Grixis Affinity","playerCount":137,"overallWinrate":45.0,"totalMatches":199},{"name":"Jund Wildfire","playerCount":134,"overallWinrate":54.9,"totalMatches":194},{"name":"Mono-Red Rally","playerCount":112,"overallWinrate":48.0,"totalMatches":149},{"name":"Golgari Gardens","playerCount":91,"overallWinrate":52.8,"totalMatches":127},{"name":"Rakdos Madness Burn","playerCount":74,"overallWinrate":40.6,"totalMatches":117},{"name":"Gruul Ramp","playerCount":64,"overallWinrate":53.1,"totalMatches":113},{"name":"Mono-Blue Faeries","playerCount":64,"overallWinrate":58.8,"totalMatches":114},{"name":"Golgari Spy Combo","playerCount":61,"overallWinrate":49.4,"totalMatches":87},{"name":"Azorius Caw-Gates","playerCount":60,"overallWinrate":54.6,"totalMatches":108},{"name":"Mono-White Aggro","playerCount":58,"overallWinrate":49.5,"totalMatches":103},{"name":"Azorius Familiars","playerCount":41,"overallWinrate":50.0,"totalMatches":91},{"name":"Dimir Terror","playerCount":39,"overallWinrate":63.6,"totalMatches":55}],"meta":{"totalPlayers":1880,"eloMatchedPlayers":0,"eloMatchRate":0.0,"totalMatches":1260,"tournamentCount":51}},{"format":"Vintage","archetypes":["Raker Shops","Mono-White Initiative","Dredge","Sphere Shops","Oath of Druids","Blue Tempo","Jewel Shops"],"rawMatrix":[[null,80.0,100.0,58.3,0.0,50.0,100.0],[20.0,null,0.0,0.0,null,100.0,null],[0.0,100.0,null,50.0,0.0,null,null],[41.7,100.0,50.0,null,33.3,100.0,null],[100.0,null,100.0,66.7,null,null,null],[50.0,0.0,null,0.0,null,null,100.0],[0.0,null,null,null,null,0.0,null]],"adjustedMatrix":[[null,80.0,100.0,58.3,0.0,50.0,100.0],[20.0,null,0.0,0.0,null,100.0,null],[0.0,100.0,null,50.0,0.0,null,null],[41.7,100.0,50.0,null,33.3,100.0,null],[100.0,null,100.0,66.7,null,null,null],[50.0,0.0,null,0.0,null,null,100.0],[0.0,null,null,null,null,0.0,null]],"sampleSizes":[[0,5,4,12,1,2,1],[5,0,1,1,0,1,0],[4,1,0,2,1,0,0],[12,1,2,0,3,1,0],[1,0,1,3,0,0,0],[2,1,0,1,0,0,1],[1,0,0,0,0,1,0]],"stats":[{"name":"Raker Shops","playerCount":181,"overallWinrate":68.0,"totalMatches":25},{"name":"Mono-White Initiative","playerCount":151,"overallWinrate":25.0,"totalMatches":8},{"name":"Dredge","playerCount":113,"overallWinrate":25.0,"totalMatches":8},{"name":"Sphere Shops","playerCount":93,"overallWinrate":47.4,"totalMatches":19},{"name":"Oath of Druids","playerCount":46,"overallWinrate":80.0,"totalMatches":5},{"name":"Blue Tempo","playerCount":22,"overallWinrate":40.0,"totalMatches":5},{"name":"Jewel Shops","playerCount":7,"overallWinrate":0.0,"totalMatches":2}],"meta":{"totalPlayers":1440,"eloMatchedPlayers":0,"eloMatchRate":0.0,"totalMatches":36,"tournamentCount":45}}];
+
+let currentMode = 'raw';
+let currentFormat = 0;
+let minSample = 5;
+
+function init() {
+  const sel = document.getElementById('formatSelect');
+  DATA.forEach((d, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = d.format;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', () => { currentFormat = parseInt(sel.value); render(); });
+  document.getElementById('minSampleSelect').addEventListener('change', (e) => {
+    minSample = parseInt(e.target.value);
+    render();
+  });
+  render();
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('btnRaw').classList.toggle('active', mode === 'raw');
+  document.getElementById('btnAdj').classList.toggle('active', mode === 'adjusted');
+  render();
+}
+
+function getColor(wr) {
+  if (wr === null) return '';
+  // Green for >50, red for <50, neutral at 50
+  const diff = wr - 50;
+  if (Math.abs(diff) < 1) return 'background:#374151;color:#e4e4e7';
+  if (diff > 0) {
+    const intensity = Math.min(diff / 25, 1);
+    if (intensity > 0.6) return 'background:#166534;color:#fff';
+    if (intensity > 0.3) return 'background:#15803d;color:#fff';
+    return 'background:#1a4d2e;color:#d1fae5';
+  } else {
+    const intensity = Math.min(Math.abs(diff) / 25, 1);
+    if (intensity > 0.6) return 'background:#991b1b;color:#fff';
+    if (intensity > 0.3) return 'background:#b91c1c;color:#fff';
+    return 'background:#4a1d1d;color:#fecaca';
+  }
+}
+
+function render() {
+  const d = DATA[currentFormat];
+  const matrix = currentMode === 'raw' ? d.rawMatrix : d.adjustedMatrix;
+  const archetypes = d.archetypes;
+  const sizes = d.sampleSizes;
+  const stats = d.stats;
+  const n = archetypes.length;
+
+  // Meta info
+  const mi = d.meta;
+  document.getElementById('metaInfo').innerHTML =
+    `<span>Format: <strong>${d.format}</strong></span>` +
+    `<span>Tournaments: <strong>${mi.tournamentCount}</strong></span>` +
+    `<span>Players: <strong>${mi.totalPlayers.toLocaleString()}</strong></span>` +
+    `<span>Matches: <strong>${mi.totalMatches.toLocaleString()}</strong></span>` +
+    `<span>ELO Match Rate: <strong>${mi.eloMatchRate}%</strong> (${mi.eloMatchedPlayers} players)</span>`;
+
+  // Build table
+  let html = '<thead><tr><th class="corner"></th>';
+  for (let j = 0; j < n; j++) {
+    html += `<th class="col-header" title="${archetypes[j]}">${archetypes[j]}</th>`;
+  }
+  html += '<th class="col-header overall-col" title="Overall WR">Overall</th>';
+  html += '</tr></thead><tbody>';
+
+  for (let i = 0; i < n; i++) {
+    const s = stats[i];
+    const share = (s.playerCount / mi.totalPlayers * 100).toFixed(1);
+    html += `<tr><th class="row-header" title="${archetypes[i]} (${share}% meta, ${s.playerCount} players)">${archetypes[i]}</th>`;
+
+    for (let j = 0; j < n; j++) {
+      if (i === j) {
+        html += '<td class="mirror">--</td>';
+        continue;
+      }
+
+      const wr = matrix[i][j];
+      const count = sizes[i][j];
+
+      if (wr === null || count === 0) {
+        html += '<td class="no-data">--</td>';
+        continue;
+      }
+
+      const lowSample = count < minSample;
+      const style = getColor(wr);
+      const cls = `cell-value${lowSample ? ' low-sample' : ''}`;
+
+      html += `<td class="${cls}" style="${style}" title="${archetypes[i]} vs ${archetypes[j]}: ${wr}% (${count} matches)">`;
+      html += `${wr.toFixed(1)}`;
+      html += `<span class="sample-size">n=${count}</span>`;
+      html += '</td>';
+    }
+
+    // Overall column
+    const overallStyle = getColor(s.overallWinrate);
+    html += `<td class="cell-value overall-col" style="${overallStyle}" title="Overall: ${s.overallWinrate}% (${s.totalMatches} matches)">${s.overallWinrate.toFixed(1)}<span class="sample-size">${s.totalMatches}</span></td>`;
+    html += '</tr>';
+  }
+
+  html += '</tbody>';
+  document.getElementById('matrixTable').innerHTML = html;
+}
+
+init();
+</script>
+
+</body>
+</html>

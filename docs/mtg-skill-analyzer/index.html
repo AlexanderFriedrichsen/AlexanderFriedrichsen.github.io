@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MTG Skill-Adjusted Meta Analyzer</title>
+<meta name="description" content="Interactive Magic: The Gathering matchup matrix with ELO-based skill adjustments. Compare archetype win rates across Modern, Standard, Legacy, Pauper, and Vintage.">
+<meta property="og:title" content="MTG Skill-Adjusted Meta Analyzer">
+<meta property="og:description" content="Interactive MTG matchup matrices with ELO-based skill adjustments across 5 formats. See which decks are carried by pilot skill and which overperform after adjustment.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://honestafblog.com/mtg-skill-analyzer/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MTG Skill-Adjusted Meta Analyzer">
+<meta name="twitter:description" content="Interactive MTG matchup matrices with ELO-based skill adjustments across 5 formats.">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232733;
+    --border: #2d3142;
+    --text: #e4e4e7;
+    --text-muted: #9ca3af;
+    --accent: #818cf8;
+    --accent-dim: #4f46e5;
+    --green-strong: #166534;
+    --green-mid: #15803d;
+    --green-light: #22c55e;
+    --red-strong: #991b1b;
+    --red-mid: #dc2626;
+    --neutral: #374151;
+    --blue-delta: #3b82f6;
+    --orange-delta: #f59e0b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    background: linear-gradient(135deg, #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  /* ── Insights Box ── */
+  .insights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .insight-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .insight-card .insight-label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+  }
+
+  .insight-card .insight-value {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .insight-card .insight-detail {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+
+  /* ── Controls ── */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .control-group label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  select, button {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  select:hover, button:hover {
+    border-color: var(--accent);
+    background: var(--surface);
+  }
+
+  select:focus, button:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  button.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  button[aria-pressed="true"] {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .toggle-group {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .toggle-group button {
+    border: none;
+    border-radius: 0;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .toggle-group button:not(:last-child) {
+    border-right: 1px solid var(--border);
+  }
+
+  .btn-export {
+    margin-left: auto;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.75rem;
+  }
+
+  /* ── Meta Info ── */
+  .meta-info {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    padding: 0.6rem 1rem;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+
+  .meta-info span { color: var(--text-muted); }
+  .meta-info strong { color: var(--text); }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+  }
+
+  .legend-bar {
+    display: flex;
+    height: 12px;
+    width: 160px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .legend-bar span { flex: 1; }
+
+  /* ── Matrix ── */
+  .matrix-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition: opacity 0.2s ease;
+  }
+
+  .matrix-wrapper.fading {
+    opacity: 0.5;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 700px;
+  }
+
+  th, td {
+    padding: 0.3rem 0.45rem;
+    text-align: center;
+    font-size: 0.78rem;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  th {
+    background: var(--surface2);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  th:hover {
+    background: var(--accent-dim);
+  }
+
+  th.row-header {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface2);
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.72rem;
+  }
+
+  th.row-header:hover {
+    background: var(--accent-dim);
+  }
+
+  th.corner {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    cursor: pointer;
+  }
+
+  .col-header {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    padding: 0.5rem 0.3rem;
+    min-height: 100px;
+    font-size: 0.68rem;
+    max-width: 30px;
+  }
+
+  .sort-arrow {
+    font-size: 0.6rem;
+    margin-left: 2px;
+    opacity: 0.7;
+  }
+
+  td.mirror {
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-size: 0.65rem;
+  }
+
+  td.cell-value {
+    font-weight: 600;
+    font-size: 0.78rem;
+    cursor: default;
+    position: relative;
+    transition: opacity 0.15s;
+  }
+
+  td.cell-value .sample-size {
+    display: block;
+    font-size: 0.55rem;
+    font-weight: 400;
+    color: rgba(255,255,255,0.45);
+    line-height: 1;
+    margin-top: 1px;
+  }
+
+  td.low-sample {
+    opacity: 0.45;
+  }
+
+  td.no-data {
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.65rem;
+  }
+
+  .overall-col {
+    font-weight: 700;
+    background: var(--surface2) !important;
+    border-left: 2px solid var(--accent-dim);
+  }
+
+  /* ── Tooltip ── */
+  .custom-tooltip {
+    position: fixed;
+    background: #1e2030;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+    color: var(--text);
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 320px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 0.15s;
+    line-height: 1.5;
+  }
+
+  .custom-tooltip.visible {
+    opacity: 1;
+  }
+
+  .custom-tooltip .tt-title {
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+    font-size: 0.85rem;
+  }
+
+  .custom-tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+
+  .custom-tooltip .tt-label {
+    color: var(--text-muted);
+  }
+
+  .custom-tooltip .tt-value {
+    font-weight: 600;
+  }
+
+  .custom-tooltip .tt-positive { color: #4ade80; }
+  .custom-tooltip .tt-negative { color: #f87171; }
+  .custom-tooltip .tt-blue { color: var(--blue-delta); }
+  .custom-tooltip .tt-orange { color: var(--orange-delta); }
+
+  /* ── Skill Gap Leaderboard ── */
+  .leaderboard {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .leaderboard-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .leaderboard-section h3 {
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent);
+  }
+
+  .leaderboard-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .leaderboard-rank {
+    font-weight: 700;
+    color: var(--text-muted);
+    width: 1.5rem;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .leaderboard-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .leaderboard-bar-container {
+    width: 100px;
+    height: 14px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .leaderboard-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  .leaderboard-value {
+    font-weight: 600;
+    width: 3.5rem;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* ── Deck Recommender ── */
+  .recommender {
+    margin-top: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+  }
+
+  .recommender h2 {
+    font-size: 1rem;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+
+  .recommender-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .meta-slider {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .meta-slider label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted);
+  }
+
+  .meta-slider input[type="range"] {
+    width: 70px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .meta-slider .meta-pct {
+    width: 2.5rem;
+    text-align: right;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .recommender-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .rec-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--surface2);
+    border-radius: 6px;
+    font-size: 0.8rem;
+  }
+
+  .rec-rank {
+    font-weight: 700;
+    color: var(--accent);
+    width: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .rec-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rec-wr {
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ── Methodology ── */
+  .methodology {
+    margin-top: 2rem;
+    padding: 1.25rem;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .methodology h2 {
+    font-size: 1.05rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent);
+  }
+
+  .methodology h3 {
+    font-size: 0.9rem;
+    margin: 0.75rem 0 0.4rem;
+    color: var(--text);
+  }
+
+  .methodology p, .methodology li {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .methodology ul {
+    padding-left: 1.5rem;
+  }
+
+  .methodology code {
+    background: var(--surface2);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    font-size: 0.78rem;
+  }
+
+  .methodology-summary {
+    padding: 0.75rem 1rem;
+    background: var(--surface2);
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  .methodology details {
+    margin-top: 0.75rem;
+  }
+
+  .methodology summary {
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.25rem 0;
+  }
+
+  .methodology summary:hover {
+    text-decoration: underline;
+  }
+
+  /* ── Footer ── */
+  footer {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  footer a:hover {
+    text-decoration: underline;
+  }
+
+  .data-freshness {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  /* ── Mobile Deck Picker ── */
+  .mobile-picker {
+    display: none;
+  }
+
+  .mobile-matchup-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .mobile-matchup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--surface2);
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+
+  .mobile-matchup .mu-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-matchup .mu-wr {
+    font-weight: 700;
+    flex-shrink: 0;
+    min-width: 3rem;
+    text-align: right;
+  }
+
+  .mobile-matchup .mu-indicator {
+    font-size: 0.7rem;
+    flex-shrink: 0;
+    width: 1.5rem;
+    text-align: center;
+  }
+
+  .mobile-matchup .mu-sample {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    width: 2.5rem;
+    text-align: right;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .container { padding: 0.75rem; }
+    header h1 { font-size: 1.2rem; }
+    .controls { flex-direction: column; align-items: stretch; }
+    .btn-export { margin-left: 0; }
+    .matrix-wrapper { display: none; }
+    .mobile-picker { display: block; }
+    .legend { display: none; }
+    .leaderboard { grid-template-columns: 1fr; }
+    .insights { grid-template-columns: 1fr 1fr; }
+    .recommender-controls { grid-template-columns: 1fr; }
+    .recommender-results { grid-template-columns: 1fr; }
+  }
+
+  @media (min-width: 769px) {
+    .mobile-picker { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>MTG Skill-Adjusted Meta Analyzer</h1>
+    <p>Archetype matchup matrices with ELO-based skill adjustments from tournament data</p>
+    <div class="data-freshness" id="dataFreshness"></div>
+  </header>
+
+  <div id="insights" class="insights"></div>
+
+  <div class="controls">
+    <div class="control-group">
+      <label for="formatSelect">Format</label>
+      <select id="formatSelect" aria-label="Select format"></select>
+    </div>
+    <div class="control-group">
+      <label id="viewLabel">View</label>
+      <div class="toggle-group" role="group" aria-labelledby="viewLabel">
+        <button id="btnRaw" aria-pressed="true" onclick="setMode('raw')">Raw</button>
+        <button id="btnAdj" aria-pressed="false" onclick="setMode('adjusted')">Adjusted</button>
+        <button id="btnDelta" aria-pressed="false" onclick="setMode('delta')">Delta</button>
+      </div>
+    </div>
+    <div class="control-group">
+      <label for="minSampleSelect">Min Sample</label>
+      <select id="minSampleSelect" aria-label="Minimum sample size">
+        <option value="0">All</option>
+        <option value="3">3+</option>
+        <option value="5" selected>5+</option>
+        <option value="10">10+</option>
+        <option value="20">20+</option>
+      </select>
+    </div>
+    <div class="control-group" id="sourceGroup" style="display:none">
+      <label id="sourceLabel">Source</label>
+      <div class="toggle-group" role="group" aria-labelledby="sourceLabel">
+        <button id="btnAll" aria-pressed="true" onclick="setSource('all')">All</button>
+        <button id="btnTabletop" aria-pressed="false" onclick="setSource('tabletop')">Tabletop</button>
+        <button id="btnMtgo" aria-pressed="false" onclick="setSource('mtgo')">MTGO</button>
+      </div>
+    </div>
+    <button class="btn-export" onclick="exportCSV()" aria-label="Export matrix as CSV">Export CSV</button>
+  </div>
+
+  <div id="metaInfo" class="meta-info"></div>
+
+  <div class="legend" id="legendBar">
+    <span>Unfavorable</span>
+    <div class="legend-bar">
+      <span style="background:#991b1b"></span>
+      <span style="background:#b91c1c"></span>
+      <span style="background:#dc2626"></span>
+      <span style="background:#6b7280"></span>
+      <span style="background:#16a34a"></span>
+      <span style="background:#15803d"></span>
+      <span style="background:#166534"></span>
+    </div>
+    <span>Favorable</span>
+    <span style="margin-left:0.75rem;font-style:italic">~ = low confidence &middot; -- = &lt;5 matches</span>
+  </div>
+
+  <div id="deltaLegend" class="legend" style="display:none">
+    <span style="color:var(--blue-delta)">+ Blue = better than raw suggests</span>
+    <span style="margin-left:1rem;color:var(--orange-delta)">- Orange = worse than raw suggests</span>
+  </div>
+
+  <div class="matrix-wrapper" id="matrixWrapper">
+    <table id="matrixTable" role="grid" aria-label="Archetype matchup matrix"></table>
+  </div>
+
+  <div class="mobile-picker" id="mobilePicker">
+    <div class="control-group" style="margin-bottom:0.75rem">
+      <label for="mobileDeckSelect">Your Deck</label>
+      <select id="mobileDeckSelect" aria-label="Select your deck" style="flex:1"></select>
+    </div>
+    <div id="mobileMatchupList" class="mobile-matchup-list"></div>
+  </div>
+
+  <div id="leaderboard" class="leaderboard"></div>
+
+  <div id="recommender" class="recommender">
+    <h2>Deck Recommender</h2>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem">
+      Adjust expected meta shares to see which deck has the best expected win rate against the field.
+    </p>
+    <div id="recommenderControls" class="recommender-controls"></div>
+    <div id="recommenderResults" class="recommender-results"></div>
+  </div>
+
+  <div class="methodology">
+    <h2>Methodology</h2>
+
+    <div class="methodology-summary">
+      This tool shows how often each MTG archetype beats every other archetype, then adjusts for player skill
+      using ELO ratings built from match histories. If a deck's "raw" win rate is inflated because elite players
+      pilot it, the "adjusted" view corrects for that. The "delta" view reveals which decks benefit most from
+      having skilled pilots, and which decks' power is inherent regardless of who plays them.
+    </div>
+
+    <details>
+      <summary>Data sources and processing details</summary>
+
+      <h3>Data Sources</h3>
+      <p>Tournament data from <a href="https://github.com/j6e/mtg-meta-analyzer" style="color:var(--accent)">MTG Meta Analyzer</a> (MIT license),
+      aggregating match results from melee.gg (tabletop) and MTGO (online) events.
+      Base player ratings from <a href="https://mtgeloproject.net" style="color:var(--accent)">MTG ELO Project</a> (471 rated players).</p>
+
+      <h3>ELO Rating Pipeline</h3>
+      <p>Unlike v1 which only had ~200 scraped ratings, v2 builds a comprehensive ELO database:</p>
+      <ul>
+        <li>471 players initialized with their scraped ELO from mtgeloproject.net</li>
+        <li>All other players start at 1500 ELO</li>
+        <li>All tournament matches processed chronologically with K=32</li>
+        <li>Result: 8,598 players (94.7%) have non-default ELO ratings</li>
+        <li>ELO coverage per match: 81-96% depending on format</li>
+      </ul>
+
+      <h3>Skill Adjustment (Residual Method)</h3>
+      <ul>
+        <li>For each match, compute expected win probability from ELO: <code>E = 1 / (1 + 10^((R_opp - R_player) / 400))</code></li>
+        <li>Compute residual: actual result (1 or 0) minus expected probability</li>
+        <li>Skill-adjusted win rate = 50% + average residual for that matchup cell</li>
+        <li>This removes the bias where strong players inflate their deck's apparent win rate</li>
+      </ul>
+
+      <h3>Confidence Intervals</h3>
+      <p>Wilson score intervals at 95% confidence are shown in tooltips. These are more reliable than
+      simple percentage intervals for small sample sizes.</p>
+
+      <h3>Skill Sensitivity</h3>
+      <p>Average absolute delta (adjusted - raw) across all matchups for each archetype.
+      High sensitivity means the deck performs very differently depending on pilot skill.</p>
+
+      <h3>Limitations</h3>
+      <ul>
+        <li>MTGO tournaments lack archetype classifications, so only tabletop (melee.gg) data has full matchup info for most formats</li>
+        <li>Standard has the most complete data with both MTGO and tabletop coverage</li>
+        <li>Vintage data is sparse and uses v1 classifications</li>
+        <li>ELO ratings are more reliable for players with many matches; newer players may have inaccurate ratings</li>
+        <li>Mirror matches are excluded from the matrix</li>
+      </ul>
+    </details>
+  </div>
+
+  <footer>
+    <p>Data: <a href="https://github.com/j6e/mtg-meta-analyzer">MTG Meta Analyzer</a> (MIT) &middot;
+    ELO: <a href="https://mtgeloproject.net">MTG ELO Project</a> &middot;
+    Built by <a href="https://honestafblog.com">Alex Friedrichsen</a></p>
+    <p style="margin-top:0.4rem"><a href="https://honestafblog.com">Blog</a> &middot;
+    <a href="https://github.com/AlexanderFriedrichsen">GitHub</a></p>
+  </footer>
+</div>
+
+<div class="custom-tooltip" id="tooltip"></div>
+
+<script>
+const DATA = [{"format":"Modern","all":{"archetypes":["Boros Energy","Izzet Affinity","Jeskai Blink","W-U-R-G Domain Zoo","Izzet Prowess","Golgari Yawgmoth","Mono-Green Amulet Titan","Boros Aggro","Mono-Blue Belcher","Gruul Eldrazi Ramp","W-U-B-G Goryo's","Mono-Red Storm","Esper Blink","Simic Ritual","Boros"],"rawMatrix":[[null,50.0,47.8,42.3,71.4,47.1,22.2,36.8,38.5,40.0,44.4,44.4,47.1,50.0,40.0],[50.0,null,66.7,61.5,72.7,54.5,44.4,40.0,66.7,41.7,81.2,20.0,50.0,50.0,100.0],[52.2,33.3,null,83.3,40.0,33.3,22.2,57.1,37.5,0.0,25.0,0.0,0.0,50.0,75.0],[57.7,38.5,16.7,null,70.0,37.5,40.0,45.5,100.0,40.0,28.6,33.3,50.0,50.0,100.0],[28.6,27.3,60.0,30.0,null,71.4,0.0,14.3,25.0,0.0,25.0,0.0,50.0,0.0,50.0],[52.9,45.5,66.7,62.5,28.6,null,50.0,25.0,22.2,25.0,80.0,75.0,25.0,66.7,0.0],[77.8,55.6,77.8,60.0,100.0,50.0,null,50.0,0.0,100.0,50.0,100.0,75.0,50.0,0.0],[63.2,60.0,42.9,54.5,85.7,75.0,50.0,null,60.0,100.0,null,25.0,33.3,66.7,100.0],[61.5,33.3,62.5,0.0,75.0,77.8,100.0,40.0,null,25.0,100.0,66.7,100.0,0.0,100.0],[60.0,58.3,100.0,60.0,100.0,75.0,0.0,0.0,75.0,null,25.0,0.0,25.0,66.7,0.0],[55.6,18.8,75.0,71.4,75.0,20.0,50.0,null,0.0,75.0,null,0.0,50.0,100.0,null],[55.6,80.0,100.0,66.7,100.0,25.0,0.0,75.0,33.3,100.0,100.0,null,100.0,0.0,66.7],[52.9,50.0,100.0,50.0,50.0,75.0,25.0,66.7,0.0,75.0,50.0,0.0,null,50.0,null],[50.0,50.0,50.0,50.0,100.0,33.3,50.0,33.3,100.0,33.3,0.0,100.0,50.0,null,null],[60.0,0.0,25.0,0.0,50.0,100.0,100.0,0.0,0.0,100.0,null,33.3,null,null,null]],"adjustedMatrix":[[null,50.2,45.5,44.0,68.1,45.9,24.7,40.6,41.1,44.5,42.0,43.9,42.4,51.1,45.7],[49.8,null,65.8,61.3,70.9,51.5,45.8,40.7,67.3,44.2,77.6,28.0,49.2,43.0,99.3],[54.5,34.2,null,78.1,41.5,34.3,28.2,53.2,42.2,2.5,24.9,10.2,-2.1,41.9,73.1],[56.0,38.7,21.9,null,72.7,37.2,47.8,51.1,100.7,43.5,29.7,43.8,52.6,49.6,100.1],[31.9,29.1,58.5,27.3,null,66.0,10.6,14.7,29.1,4.5,27.4,-6.9,51.3,9.9,53.3],[54.1,48.5,65.7,62.8,34.0,null,43.7,29.0,24.1,28.3,74.8,75.3,25.3,65.2,4.2],[75.3,54.2,71.8,52.2,89.4,56.3,null,58.9,3.5,102.2,46.7,101.9,72.9,52.8,6.4],[59.4,59.3,46.8,48.9,85.3,71.0,41.1,null,63.1,94.6,null,28.8,28.0,63.1,106.9],[58.9,32.7,57.8,-0.7,70.9,75.9,96.5,36.9,null,23.9,101.9,70.4,93.9,1.4,103.0],[55.5,55.8,97.5,56.5,95.5,71.7,-2.2,5.4,76.1,null,33.1,17.4,23.1,63.8,4.2],[58.0,22.4,75.1,70.3,72.6,25.2,53.3,null,-1.9,66.9,null,-1.0,59.9,93.0,null],[56.1,72.0,89.8,56.2,106.9,24.7,-1.9,71.2,29.6,82.6,101.0,null,100.2,-0.0,72.2],[57.6,50.8,102.1,47.4,48.7,74.7,27.1,72.0,6.1,76.9,40.1,-0.2,null,48.2,null],[48.9,57.0,58.1,50.4,90.1,34.8,47.2,36.9,98.6,36.2,7.0,100.0,51.8,null,null],[54.3,0.7,26.9,-0.1,46.7,95.8,93.6,-6.9,-3.0,95.8,null,27.8,null,null,null]],"deltaMatrix":[[null,0.2,-2.3,1.7,-3.3,-1.2,2.5,3.8,2.6,4.5,-2.4,-0.5,-4.7,1.1,5.7],[-0.2,null,-0.9,-0.2,-1.8,-3.0,1.4,0.7,0.6,2.5,-3.6,8.0,-0.8,-7.0,-0.7],[2.3,0.9,null,-5.2,1.5,1.0,6.0,-3.9,4.7,2.5,-0.1,10.2,-2.1,-8.1,-1.9],[-1.7,0.2,5.2,null,2.7,-0.3,7.8,5.6,0.7,3.5,1.1,10.5,2.6,-0.4,0.1],[3.3,1.8,-1.5,-2.7,null,-5.4,10.6,0.4,4.1,4.5,2.4,-6.9,1.3,9.9,3.3],[1.2,3.0,-1.0,0.3,5.4,null,-6.3,4.0,1.9,3.3,-5.2,0.3,0.3,-1.5,4.2],[-2.5,-1.4,-6.0,-7.8,-10.6,6.3,null,8.9,3.5,2.2,-3.3,1.9,-2.1,2.8,6.4],[-3.8,-0.7,3.9,-5.6,-0.4,-4.0,-8.9,null,3.1,-5.4,null,3.8,-5.3,-3.6,6.9],[-2.6,-0.6,-4.7,-0.7,-4.1,-1.9,-3.5,-3.1,null,-1.1,1.9,3.7,-6.1,1.4,3.0],[-4.5,-2.5,-2.5,-3.5,-4.5,-3.3,-2.2,5.4,1.1,null,8.1,17.4,-1.9,-2.9,4.2],[2.4,3.6,0.1,-1.1,-2.4,5.2,3.3,null,-1.9,-8.1,null,-1.0,9.9,-7.0,null],[0.5,-8.0,-10.2,-10.5,6.9,-0.3,-1.9,-3.8,-3.7,-17.4,1.0,null,0.2,-0.0,5.5],[4.7,0.8,2.1,-2.6,-1.3,-0.3,2.1,5.3,6.1,1.9,-9.9,-0.2,null,-1.8,null],[-1.1,7.0,8.1,0.4,-9.9,1.5,-2.8,3.6,-1.4,2.9,7.0,0.0,1.8,null,null],[-5.7,0.7,1.9,-0.1,-3.3,-4.2,-6.4,-6.9,-3.0,-4.2,null,-5.5,null,null,null]],"sampleSizes":[[0,32,23,26,28,17,9,19,13,20,18,9,17,8,10],[32,0,6,13,11,11,9,5,6,12,16,10,6,2,3],[23,6,0,6,10,6,9,7,8,2,4,3,2,2,4],[26,13,6,0,10,8,5,11,4,5,7,6,2,2,1],[28,11,10,10,0,7,4,7,4,1,4,1,4,2,4],[17,11,6,8,7,0,4,4,9,4,5,4,4,3,1],[9,9,9,5,4,4,0,2,4,1,4,1,4,2,1],[19,5,7,11,7,4,2,0,5,4,0,4,3,3,1],[13,6,8,4,4,9,4,5,0,4,4,3,2,2,1],[20,12,2,5,1,4,1,4,4,0,4,2,4,3,1],[18,16,4,7,4,5,4,0,4,4,0,1,2,1,0],[9,10,3,6,1,4,1,4,3,2,1,0,2,1,3],[17,6,2,2,4,4,4,3,2,4,2,2,0,4,0],[8,2,2,2,2,3,2,3,2,3,1,1,4,0,0],[10,3,4,1,4,1,1,1,1,1,0,3,0,0,0]],"wilsonLower":[[null,33.6,29.2,25.5,52.9,26.2,6.3,19.1,17.7,21.9,24.6,18.9,26.2,21.5,16.8],[33.6,null,30.0,35.5,43.4,28.0,18.9,11.8,30.0,19.3,57.0,5.7,18.8,9.5,43.8],[33.0,9.7,null,43.6,16.8,9.7,6.3,25.0,13.7,0,4.6,0,0,9.5,30.1],[38.9,17.7,3.0,null,39.7,13.7,11.8,21.3,51.0,11.8,8.2,9.7,9.5,9.5,20.7],[15.3,9.7,31.3,10.8,null,35.9,0,2.6,4.6,0,4.6,0,15.0,0,15.0],[31.0,21.3,30.0,30.6,8.2,null,15.0,4.6,6.3,4.6,37.6,30.1,4.6,20.8,0],[45.3,26.7,45.3,23.1,51.0,15.0,null,9.5,0,20.7,15.0,20.7,30.1,9.5,0],[41.0,23.1,15.8,28.0,48.7,30.1,9.5,null,23.1,51.0,null,4.6,6.1,20.8,20.7],[35.5,9.7,30.6,0,30.1,45.3,51.0,11.8,null,4.6,51.0,20.8,34.2,0,20.7],[38.7,32.0,34.2,23.1,20.7,30.1,0,0,30.1,null,4.6,0,4.6,20.8,0],[33.7,6.6,30.1,35.9,30.1,3.6,15.0,null,0,30.1,null,0,9.5,20.7,null],[26.7,49.0,43.8,30.0,20.7,4.6,0,30.1,6.1,34.2,20.7,null,34.2,0,20.8],[31.0,18.8,34.2,9.5,15.0,30.1,4.6,20.8,0,30.1,9.5,0,null,15.0,null],[21.5,9.5,9.5,9.5,34.2,6.1,9.5,6.1,34.2,6.1,0,20.7,15.0,null,null],[31.3,0,4.6,0,15.0,20.7,20.7,0,0,20.7,null,6.1,null,null,null]],"wilsonUpper":[[null,66.4,67.0,61.1,84.7,69.0,54.7,59.0,64.5,61.3,66.3,73.3,69.0,78.5,68.7],[66.4,null,90.3,82.3,90.3,78.7,73.3,76.9,90.3,68.0,93.4,51.0,81.2,90.5,100],[70.8,70.0,null,97.0,68.7,70.0,54.7,84.2,69.4,65.8,69.9,56.2,65.8,90.5,95.4],[74.5,64.5,56.4,null,89.2,69.4,76.9,72.0,100,76.9,64.1,70.0,90.5,90.5,100],[47.1,56.6,83.2,60.3,null,91.8,49.0,51.3,69.9,79.3,69.9,79.3,85.0,65.8,85.0],[73.8,72.0,90.3,86.3,64.1,null,85.0,69.9,54.7,69.9,96.4,95.4,69.9,93.9,79.3],[93.7,81.1,93.7,88.2,100,85.0,null,90.5,49.0,100,85.0,100,95.4,90.5,79.3],[80.9,88.2,75.0,78.7,97.4,95.4,90.5,null,88.2,100,null,69.9,79.2,93.9,100],[82.3,70.0,86.3,49.0,95.4,93.7,100,76.9,null,69.9,100,93.9,100,65.8,100],[78.1,80.7,100,88.2,100,95.4,79.3,49.0,95.4,null,69.9,65.8,69.9,93.9,79.3],[75.4,43.0,95.4,91.8,95.4,62.4,85.0,null,49.0,95.4,null,79.3,90.5,100,null],[81.1,94.3,100,90.3,100,69.9,79.3,95.4,79.2,100,100,null,100,79.3,93.9],[73.8,81.2,100,90.5,85.0,95.4,69.9,93.9,65.8,95.4,90.5,65.8,null,85.0,null],[78.5,90.5,90.5,90.5,100,79.2,90.5,79.2,100,79.2,79.3,100,85.0,null,null],[83.2,56.2,69.9,79.3,85.0,100,100,79.3,79.3,100,null,79.2,null,null,null]],"stats":[{"name":"Boros Energy","playerCount":100,"overallWinrate":46.6,"totalMatches":249,"metaShare":21.1,"skillSensitivity":2.61,"weightedWrRaw":45.7,"weightedWrAdj":45.9},{"name":"Izzet Affinity","playerCount":53,"overallWinrate":55.6,"totalMatches":142,"metaShare":11.2,"skillSensitivity":2.24,"weightedWrRaw":56.0,"weightedWrAdj":55.7},{"name":"Jeskai Blink","playerCount":36,"overallWinrate":42.4,"totalMatches":92,"metaShare":7.6,"skillSensitivity":3.6,"weightedWrRaw":39.4,"weightedWrAdj":40.4},{"name":"W-U-R-G Domain Zoo","playerCount":32,"overallWinrate":48.1,"totalMatches":106,"metaShare":6.7,"skillSensitivity":3.03,"weightedWrRaw":49.3,"weightedWrAdj":51.2},{"name":"Izzet Prowess","playerCount":38,"overallWinrate":33.0,"totalMatches":97,"metaShare":8.0,"skillSensitivity":4.15,"weightedWrRaw":29.0,"weightedWrAdj":30.6},{"name":"Golgari Yawgmoth","playerCount":30,"overallWinrate":47.1,"totalMatches":87,"metaShare":6.3,"skillSensitivity":2.71,"weightedWrRaw":46.8,"weightedWrAdj":47.8},{"name":"Mono-Green Amulet Titan","playerCount":27,"overallWinrate":62.7,"totalMatches":59,"metaShare":5.7,"skillSensitivity":4.69,"weightedWrRaw":66.0,"weightedWrAdj":64.7},{"name":"Boros Aggro","playerCount":26,"overallWinrate":61.3,"totalMatches":75,"metaShare":5.5,"skillSensitivity":4.26,"weightedWrRaw":62.8,"weightedWrAdj":60.7},{"name":"Mono-Blue Belcher","playerCount":22,"overallWinrate":59.4,"totalMatches":69,"metaShare":4.6,"skillSensitivity":2.74,"weightedWrRaw":58.4,"weightedWrAdj":56.6},{"name":"Gruul Eldrazi Ramp","playerCount":25,"overallWinrate":52.2,"totalMatches":67,"metaShare":5.3,"skillSensitivity":4.57,"weightedWrRaw":53.6,"weightedWrAdj":52.7},{"name":"W-U-B-G Goryo's","playerCount":23,"overallWinrate":45.7,"totalMatches":70,"metaShare":4.8,"skillSensitivity":3.83,"weightedWrRaw":49.3,"weightedWrAdj":50.3},{"name":"Mono-Red Storm","playerCount":19,"overallWinrate":66.0,"totalMatches":50,"metaShare":4.0,"skillSensitivity":4.99,"weightedWrRaw":66.5,"weightedWrAdj":63.4},{"name":"Esper Blink","playerCount":18,"overallWinrate":51.8,"totalMatches":56,"metaShare":3.8,"skillSensitivity":3.01,"weightedWrRaw":52.7,"weightedWrAdj":54.0},{"name":"Simic Ritual","playerCount":12,"overallWinrate":51.4,"totalMatches":35,"metaShare":2.5,"skillSensitivity":3.65,"weightedWrRaw":53.2,"weightedWrAdj":54.3},{"name":"Boros","playerCount":14,"overallWinrate":43.3,"totalMatches":30,"metaShare":2.9,"skillSensitivity":3.81,"weightedWrRaw":43.2,"weightedWrAdj":39.9}],"meta":{"totalPlayers":475,"totalMatches":642,"eloMatchRate":96.0,"classifiedMatches":642,"tournamentCount":139,"dateRange":["2026-01-01","2026-03-16"]}},"tabletop":{"archetypes":["Boros Energy","Izzet Affinity","Jeskai Blink","W-U-R-G Domain Zoo","Izzet Prowess","Golgari Yawgmoth","Mono-Green Amulet Titan","Boros Aggro","Mono-Blue Belcher","Gruul Eldrazi Ramp","W-U-B-G Goryo's","Mono-Red Storm","Esper Blink","Simic Ritual","Boros"],"rawMatrix":[[null,50.0,47.8,42.3,71.4,47.1,22.2,36.8,38.5,40.0,44.4,44.4,47.1,50.0,40.0],[50.0,null,66.7,61.5,72.7,54.5,44.4,40.0,66.7,41.7,81.2,20.0,50.0,50.0,100.0],[52.2,33.3,null,83.3,40.0,33.3,22.2,57.1,37.5,0.0,25.0,0.0,0.0,50.0,75.0],[57.7,38.5,16.7,null,70.0,37.5,40.0,45.5,100.0,40.0,28.6,33.3,50.0,50.0,100.0],[28.6,27.3,60.0,30.0,null,71.4,0.0,14.3,25.0,0.0,25.0,0.0,50.0,0.0,50.0],[52.9,45.5,66.7,62.5,28.6,null,50.0,25.0,22.2,25.0,80.0,75.0,25.0,66.7,0.0],[77.8,55.6,77.8,60.0,100.0,50.0,null,50.0,0.0,100.0,50.0,100.0,75.0,50.0,0.0],[63.2,60.0,42.9,54.5,85.7,75.0,50.0,null,60.0,100.0,null,25.0,33.3,66.7,100.0],[61.5,33.3,62.5,0.0,75.0,77.8,100.0,40.0,null,25.0,100.0,66.7,100.0,0.0,100.0],[60.0,58.3,100.0,60.0,100.0,75.0,0.0,0.0,75.0,null,25.0,0.0,25.0,66.7,0.0],[55.6,18.8,75.0,71.4,75.0,20.0,50.0,null,0.0,75.0,null,0.0,50.0,100.0,null],[55.6,80.0,100.0,66.7,100.0,25.0,0.0,75.0,33.3,100.0,100.0,null,100.0,0.0,66.7],[52.9,50.0,100.0,50.0,50.0,75.0,25.0,66.7,0.0,75.0,50.0,0.0,null,50.0,null],[50.0,50.0,50.0,50.0,100.0,33.3,50.0,33.3,100.0,33.3,0.0,100.0,50.0,null,null],[60.0,0.0,25.0,0.0,50.0,100.0,100.0,0.0,0.0,100.0,null,33.3,null,null,null]],"adjustedMatrix":[[null,50.2,45.5,44.0,68.1,45.9,24.7,40.6,41.1,44.5,42.0,43.9,42.4,51.1,45.7],[49.8,null,65.8,61.3,70.9,51.5,45.8,40.7,67.3,44.2,77.6,28.0,49.2,43.0,99.3],[54.5,34.2,null,78.1,41.5,34.3,28.2,53.2,42.2,2.5,24.9,10.2,-2.1,41.9,73.1],[56.0,38.7,21.9,null,72.7,37.2,47.8,51.1,100.7,43.5,29.7,43.8,52.6,49.6,100.1],[31.9,29.1,58.5,27.3,null,66.0,10.6,14.7,29.1,4.5,27.4,-6.9,51.3,9.9,53.3],[54.1,48.5,65.7,62.8,34.0,null,43.7,29.0,24.1,28.3,74.8,75.3,25.3,65.2,4.2],[75.3,54.2,71.8,52.2,89.4,56.3,null,58.9,3.5,102.2,46.7,101.9,72.9,52.8,6.4],[59.4,59.3,46.8,48.9,85.3,71.0,41.1,null,63.1,94.6,null,28.8,28.0,63.1,106.9],[58.9,32.7,57.8,-0.7,70.9,75.9,96.5,36.9,null,23.9,101.9,70.4,93.9,1.4,103.0],[55.5,55.8,97.5,56.5,95.5,71.7,-2.2,5.4,76.1,null,33.1,17.4,23.1,63.8,4.2],[58.0,22.4,75.1,70.3,72.6,25.2,53.3,null,-1.9,66.9,null,-1.0,59.9,93.0,null],[56.1,72.0,89.8,56.2,106.9,24.7,-1.9,71.2,29.6,82.6,101.0,null,100.2,-0.0,72.2],[57.6,50.8,102.1,47.4,48.7,74.7,27.1,72.0,6.1,76.9,40.1,-0.2,null,48.2,null],[48.9,57.0,58.1,50.4,90.1,34.8,47.2,36.9,98.6,36.2,7.0,100.0,51.8,null,null],[54.3,0.7,26.9,-0.1,46.7,95.8,93.6,-6.9,-3.0,95.8,null,27.8,null,null,null]],"deltaMatrix":[[null,0.2,-2.3,1.7,-3.3,-1.2,2.5,3.8,2.6,4.5,-2.4,-0.5,-4.7,1.1,5.7],[-0.2,null,-0.9,-0.2,-1.8,-3.0,1.4,0.7,0.6,2.5,-3.6,8.0,-0.8,-7.0,-0.7],[2.3,0.9,null,-5.2,1.5,1.0,6.0,-3.9,4.7,2.5,-0.1,10.2,-2.1,-8.1,-1.9],[-1.7,0.2,5.2,null,2.7,-0.3,7.8,5.6,0.7,3.5,1.1,10.5,2.6,-0.4,0.1],[3.3,1.8,-1.5,-2.7,null,-5.4,10.6,0.4,4.1,4.5,2.4,-6.9,1.3,9.9,3.3],[1.2,3.0,-1.0,0.3,5.4,null,-6.3,4.0,1.9,3.3,-5.2,0.3,0.3,-1.5,4.2],[-2.5,-1.4,-6.0,-7.8,-10.6,6.3,null,8.9,3.5,2.2,-3.3,1.9,-2.1,2.8,6.4],[-3.8,-0.7,3.9,-5.6,-0.4,-4.0,-8.9,null,3.1,-5.4,null,3.8,-5.3,-3.6,6.9],[-2.6,-0.6,-4.7,-0.7,-4.1,-1.9,-3.5,-3.1,null,-1.1,1.9,3.7,-6.1,1.4,3.0],[-4.5,-2.5,-2.5,-3.5,-4.5,-3.3,-2.2,5.4,1.1,null,8.1,17.4,-1.9,-2.9,4.2],[2.4,3.6,0.1,-1.1,-2.4,5.2,3.3,null,-1.9,-8.1,null,-1.0,9.9,-7.0,null],[0.5,-8.0,-10.2,-10.5,6.9,-0.3,-1.9,-3.8,-3.7,-17.4,1.0,null,0.2,-0.0,5.5],[4.7,0.8,2.1,-2.6,-1.3,-0.3,2.1,5.3,6.1,1.9,-9.9,-0.2,null,-1.8,null],[-1.1,7.0,8.1,0.4,-9.9,1.5,-2.8,3.6,-1.4,2.9,7.0,0.0,1.8,null,null],[-5.7,0.7,1.9,-0.1,-3.3,-4.2,-6.4,-6.9,-3.0,-4.2,null,-5.5,null,null,null]],"sampleSizes":[[0,32,23,26,28,17,9,19,13,20,18,9,17,8,10],[32,0,6,13,11,11,9,5,6,12,16,10,6,2,3],[23,6,0,6,10,6,9,7,8,2,4,3,2,2,4],[26,13,6,0,10,8,5,11,4,5,7,6,2,2,1],[28,11,10,10,0,7,4,7,4,1,4,1,4,2,4],[17,11,6,8,7,0,4,4,9,4,5,4,4,3,1],[9,9,9,5,4,4,0,2,4,1,4,1,4,2,1],[19,5,7,11,7,4,2,0,5,4,0,4,3,3,1],[13,6,8,4,4,9,4,5,0,4,4,3,2,2,1],[20,12,2,5,1,4,1,4,4,0,4,2,4,3,1],[18,16,4,7,4,5,4,0,4,4,0,1,2,1,0],[9,10,3,6,1,4,1,4,3,2,1,0,2,1,3],[17,6,2,2,4,4,4,3,2,4,2,2,0,4,0],[8,2,2,2,2,3,2,3,2,3,1,1,4,0,0],[10,3,4,1,4,1,1,1,1,1,0,3,0,0,0]],"wilsonLower":[[null,33.6,29.2,25.5,52.9,26.2,6.3,19.1,17.7,21.9,24.6,18.9,26.2,21.5,16.8],[33.6,null,30.0,35.5,43.4,28.0,18.9,11.8,30.0,19.3,57.0,5.7,18.8,9.5,43.8],[33.0,9.7,null,43.6,16.8,9.7,6.3,25.0,13.7,0,4.6,0,0,9.5,30.1],[38.9,17.7,3.0,null,39.7,13.7,11.8,21.3,51.0,11.8,8.2,9.7,9.5,9.5,20.7],[15.3,9.7,31.3,10.8,null,35.9,0,2.6,4.6,0,4.6,0,15.0,0,15.0],[31.0,21.3,30.0,30.6,8.2,null,15.0,4.6,6.3,4.6,37.6,30.1,4.6,20.8,0],[45.3,26.7,45.3,23.1,51.0,15.0,null,9.5,0,20.7,15.0,20.7,30.1,9.5,0],[41.0,23.1,15.8,28.0,48.7,30.1,9.5,null,23.1,51.0,null,4.6,6.1,20.8,20.7],[35.5,9.7,30.6,0,30.1,45.3,51.0,11.8,null,4.6,51.0,20.8,34.2,0,20.7],[38.7,32.0,34.2,23.1,20.7,30.1,0,0,30.1,null,4.6,0,4.6,20.8,0],[33.7,6.6,30.1,35.9,30.1,3.6,15.0,null,0,30.1,null,0,9.5,20.7,null],[26.7,49.0,43.8,30.0,20.7,4.6,0,30.1,6.1,34.2,20.7,null,34.2,0,20.8],[31.0,18.8,34.2,9.5,15.0,30.1,4.6,20.8,0,30.1,9.5,0,null,15.0,null],[21.5,9.5,9.5,9.5,34.2,6.1,9.5,6.1,34.2,6.1,0,20.7,15.0,null,null],[31.3,0,4.6,0,15.0,20.7,20.7,0,0,20.7,null,6.1,null,null,null]],"wilsonUpper":[[null,66.4,67.0,61.1,84.7,69.0,54.7,59.0,64.5,61.3,66.3,73.3,69.0,78.5,68.7],[66.4,null,90.3,82.3,90.3,78.7,73.3,76.9,90.3,68.0,93.4,51.0,81.2,90.5,100],[70.8,70.0,null,97.0,68.7,70.0,54.7,84.2,69.4,65.8,69.9,56.2,65.8,90.5,95.4],[74.5,64.5,56.4,null,89.2,69.4,76.9,72.0,100,76.9,64.1,70.0,90.5,90.5,100],[47.1,56.6,83.2,60.3,null,91.8,49.0,51.3,69.9,79.3,69.9,79.3,85.0,65.8,85.0],[73.8,72.0,90.3,86.3,64.1,null,85.0,69.9,54.7,69.9,96.4,95.4,69.9,93.9,79.3],[93.7,81.1,93.7,88.2,100,85.0,null,90.5,49.0,100,85.0,100,95.4,90.5,79.3],[80.9,88.2,75.0,78.7,97.4,95.4,90.5,null,88.2,100,null,69.9,79.2,93.9,100],[82.3,70.0,86.3,49.0,95.4,93.7,100,76.9,null,69.9,100,93.9,100,65.8,100],[78.1,80.7,100,88.2,100,95.4,79.3,49.0,95.4,null,69.9,65.8,69.9,93.9,79.3],[75.4,43.0,95.4,91.8,95.4,62.4,85.0,null,49.0,95.4,null,79.3,90.5,100,null],[81.1,94.3,100,90.3,100,69.9,79.3,95.4,79.2,100,100,null,100,79.3,93.9],[73.8,81.2,100,90.5,85.0,95.4,69.9,93.9,65.8,95.4,90.5,65.8,null,85.0,null],[78.5,90.5,90.5,90.5,100,79.2,90.5,79.2,100,79.2,79.3,100,85.0,null,null],[83.2,56.2,69.9,79.3,85.0,100,100,79.3,79.3,100,null,79.2,null,null,null]],"stats":[{"name":"Boros Energy","playerCount":100,"overallWinrate":46.6,"totalMatches":249,"metaShare":21.1,"skillSensitivity":2.61,"weightedWrRaw":45.7,"weightedWrAdj":45.9},{"name":"Izzet Affinity","playerCount":53,"overallWinrate":55.6,"totalMatches":142,"metaShare":11.2,"skillSensitivity":2.24,"weightedWrRaw":56.0,"weightedWrAdj":55.7},{"name":"Jeskai Blink","playerCount":36,"overallWinrate":42.4,"totalMatches":92,"metaShare":7.6,"skillSensitivity":3.6,"weightedWrRaw":39.4,"weightedWrAdj":40.4},{"name":"W-U-R-G Domain Zoo","playerCount":32,"overallWinrate":48.1,"totalMatches":106,"metaShare":6.7,"skillSensitivity":3.03,"weightedWrRaw":49.3,"weightedWrAdj":51.2},{"name":"Izzet Prowess","playerCount":38,"overallWinrate":33.0,"totalMatches":97,"metaShare":8.0,"skillSensitivity":4.15,"weightedWrRaw":29.0,"weightedWrAdj":30.6},{"name":"Golgari Yawgmoth","playerCount":30,"overallWinrate":47.1,"totalMatches":87,"metaShare":6.3,"skillSensitivity":2.71,"weightedWrRaw":46.8,"weightedWrAdj":47.8},{"name":"Mono-Green Amulet Titan","playerCount":27,"overallWinrate":62.7,"totalMatches":59,"metaShare":5.7,"skillSensitivity":4.69,"weightedWrRaw":66.0,"weightedWrAdj":64.7},{"name":"Boros Aggro","playerCount":26,"overallWinrate":61.3,"totalMatches":75,"metaShare":5.5,"skillSensitivity":4.26,"weightedWrRaw":62.8,"weightedWrAdj":60.7},{"name":"Mono-Blue Belcher","playerCount":22,"overallWinrate":59.4,"totalMatches":69,"metaShare":4.6,"skillSensitivity":2.74,"weightedWrRaw":58.4,"weightedWrAdj":56.6},{"name":"Gruul Eldrazi Ramp","playerCount":25,"overallWinrate":52.2,"totalMatches":67,"metaShare":5.3,"skillSensitivity":4.57,"weightedWrRaw":53.6,"weightedWrAdj":52.7},{"name":"W-U-B-G Goryo's","playerCount":23,"overallWinrate":45.7,"totalMatches":70,"metaShare":4.8,"skillSensitivity":3.83,"weightedWrRaw":49.3,"weightedWrAdj":50.3},{"name":"Mono-Red Storm","playerCount":19,"overallWinrate":66.0,"totalMatches":50,"metaShare":4.0,"skillSensitivity":4.99,"weightedWrRaw":66.5,"weightedWrAdj":63.4},{"name":"Esper Blink","playerCount":18,"overallWinrate":51.8,"totalMatches":56,"metaShare":3.8,"skillSensitivity":3.01,"weightedWrRaw":52.7,"weightedWrAdj":54.0},{"name":"Simic Ritual","playerCount":12,"overallWinrate":51.4,"totalMatches":35,"metaShare":2.5,"skillSensitivity":3.65,"weightedWrRaw":53.2,"weightedWrAdj":54.3},{"name":"Boros","playerCount":14,"overallWinrate":43.3,"totalMatches":30,"metaShare":2.9,"skillSensitivity":3.81,"weightedWrRaw":43.2,"weightedWrAdj":39.9}],"meta":{"totalPlayers":475,"totalMatches":642,"eloMatchRate":96.0,"classifiedMatches":642,"tournamentCount":21}}},{"format":"Standard","all":{"archetypes":["Izzet Lessons","Mono-Green Landfall","Dimir Midrange","Simic Ouroboroid","Jeskai Control","Izzet Prowess","Sultai Reanimator","Mono-Red Aggro","Bant Airbending","Izzet Spellementals","Simic Rhythm","Dimir Excruciator","Azorius Tempo","Izzet Elementals","Boros Dragons"],"rawMatrix":[[null,45.3,55.9,50.5,57.7,47.6,46.0,42.4,53.3,53.2,49.2,61.0,38.7,42.9,53.1],[54.7,null,57.7,31.8,74.8,46.0,63.3,68.9,34.6,57.6,37.2,60.2,63.6,61.6,54.7],[44.1,42.3,null,40.1,59.5,37.9,59.7,47.7,49.0,54.7,42.7,62.2,64.3,56.2,40.0],[49.5,68.2,59.9,null,42.1,56.5,61.2,48.7,44.2,25.0,null,0.0,14.3,0.0,24.0],[42.3,25.2,40.5,57.9,null,45.5,61.0,46.3,51.1,50.0,62.5,21.6,39.5,26.5,62.5],[52.4,54.0,62.1,43.5,54.5,null,59.2,43.6,60.0,35.8,62.1,66.1,40.0,63.2,51.4],[54.0,36.7,40.3,38.8,39.0,40.8,null,58.8,41.4,40.0,31.2,28.6,60.0,45.5,55.6],[57.6,31.1,52.3,51.3,53.7,56.4,41.2,null,33.3,51.5,51.5,37.5,68.0,32.1,51.7],[46.7,65.4,51.0,55.8,48.9,40.0,58.6,66.7,null,37.5,53.8,45.8,61.9,50.0,30.0],[46.8,42.4,45.3,75.0,50.0,64.2,60.0,48.5,62.5,null,75.0,42.1,61.4,20.3,53.8],[50.8,62.8,57.3,null,37.5,37.9,68.8,48.5,46.2,25.0,null,50.0,38.9,34.0,34.2],[39.0,39.8,37.8,100.0,78.4,33.9,71.4,62.5,54.2,57.9,50.0,null,49.3,58.2,59.4],[61.3,36.4,35.7,85.7,60.5,60.0,40.0,32.0,38.1,38.6,61.1,50.7,null,48.8,53.8],[57.1,38.4,43.8,100.0,73.5,36.8,54.5,67.9,50.0,79.7,66.0,41.8,51.2,null,28.1],[46.9,45.3,60.0,76.0,37.5,48.6,44.4,48.3,70.0,46.2,65.8,40.6,46.2,71.9,null]],"adjustedMatrix":[[null,43.9,53.2,50.3,54.8,47.9,43.0,40.0,52.8,52.5,49.8,59.3,38.2,42.9,48.9],[56.1,null,55.4,33.2,70.2,47.8,58.2,64.3,33.3,56.8,37.1,57.4,60.8,60.5,49.5],[46.8,44.6,null,42.9,57.9,41.4,57.6,46.2,48.9,56.4,44.6,61.8,62.3,56.8,40.2],[49.7,66.8,57.1,null,40.8,57.5,59.3,45.7,45.2,24.8,null,5.8,12.3,23.1,21.9],[45.2,29.8,42.1,59.2,null,49.7,60.0,46.8,54.6,57.0,66.0,31.7,43.2,34.3,62.3],[52.1,52.2,58.6,42.5,50.3,null,57.7,40.8,58.2,36.3,58.6,61.7,36.9,63.2,49.0],[57.0,41.8,42.4,40.7,40.0,42.3,null,56.9,45.2,51.6,38.2,35.9,58.1,49.7,54.6],[60.0,35.7,53.8,54.3,53.2,59.2,43.1,null,36.3,52.1,51.9,39.5,66.9,33.5,51.4],[47.2,66.7,51.1,54.8,45.4,41.8,54.8,63.7,null,42.5,48.5,46.6,61.1,48.7,29.6],[47.5,43.2,43.6,75.2,43.0,63.7,48.4,47.9,57.5,null,65.0,40.7,58.2,23.1,50.5],[50.2,62.9,55.4,null,34.0,41.4,61.8,48.1,51.5,35.0,null,55.6,39.0,35.6,32.7],[40.7,42.6,38.2,94.2,68.3,38.3,64.1,60.5,53.4,59.3,44.4,null,48.1,56.3,58.8],[61.8,39.2,37.7,87.7,56.8,63.1,41.9,33.1,38.9,41.8,61.0,51.9,null,50.5,53.6],[57.1,39.5,43.2,76.9,65.7,36.8,50.3,66.5,51.3,76.9,64.4,43.7,49.5,null,29.0],[51.1,50.5,59.8,78.1,37.7,51.0,45.4,48.6,70.4,49.5,67.3,41.2,46.4,71.0,null]],"deltaMatrix":[[null,-1.4,-2.7,-0.2,-2.9,0.3,-3.0,-2.4,-0.5,-0.7,0.6,-1.7,-0.5,0.0,-4.2],[1.4,null,-2.3,1.4,-4.6,1.8,-5.1,-4.6,-1.3,-0.8,-0.1,-2.8,-2.8,-1.1,-5.2],[2.7,2.3,null,2.8,-1.6,3.5,-2.1,-1.5,-0.1,1.7,1.9,-0.4,-2.0,0.6,0.2],[0.2,-1.4,-2.8,null,-1.3,1.0,-1.9,-3.0,1.0,-0.2,null,5.8,-2.0,23.1,-2.1],[2.9,4.6,1.6,1.3,null,4.2,-1.0,0.5,3.5,7.0,3.5,10.1,3.7,7.8,-0.2],[-0.3,-1.8,-3.5,-1.0,-4.2,null,-1.5,-2.8,-1.8,0.5,-3.5,-4.4,-3.1,0.0,-2.4],[3.0,5.1,2.1,1.9,1.0,1.5,null,-1.9,3.8,11.6,7.0,7.3,-1.9,4.2,-1.0],[2.4,4.6,1.5,3.0,-0.5,2.8,1.9,null,3.0,0.6,0.4,2.0,-1.1,1.4,-0.3],[0.5,1.3,0.1,-1.0,-3.5,1.8,-3.8,-3.0,null,5.0,-5.3,0.8,-0.8,-1.3,-0.4],[0.7,0.8,-1.7,0.2,-7.0,-0.5,-11.6,-0.6,-5.0,null,-10.0,-1.4,-3.2,2.8,-3.3],[-0.6,0.1,-1.9,null,-3.5,3.5,-7.0,-0.4,5.3,10.0,null,5.6,0.1,1.6,-1.5],[1.7,2.8,0.4,-5.8,-10.1,4.4,-7.3,-2.0,-0.8,1.4,-5.6,null,-1.2,-1.9,-0.6],[0.5,2.8,2.0,2.0,-3.7,3.1,1.9,1.1,0.8,3.2,-0.1,1.2,null,1.7,-0.2],[0.0,1.1,-0.6,-23.1,-7.8,0.0,-4.2,-1.4,1.3,-2.8,-1.6,1.9,-1.7,null,0.9],[4.2,5.2,-0.2,2.1,0.2,2.4,1.0,0.3,0.4,3.3,1.5,0.6,0.2,-0.9,null]],"sampleSizes":[[0,510,572,517,355,359,274,238,227,186,191,200,150,119,128],[510,0,310,110,147,352,98,132,104,217,148,181,151,112,86],[572,310,0,287,220,206,144,153,104,117,110,119,84,64,55],[517,110,287,0,273,23,206,156,138,4,0,1,7,4,25],[355,147,220,273,0,44,123,95,92,34,40,37,43,34,32],[359,352,206,23,44,0,49,78,70,162,103,109,85,68,35],[274,98,144,206,123,49,0,85,116,40,48,21,25,22,27],[238,132,153,156,95,78,85,0,45,33,33,32,25,28,29],[227,104,104,138,92,70,116,45,0,40,52,48,42,32,30],[186,217,117,4,34,162,40,33,40,0,100,76,57,59,39],[191,148,110,0,40,103,48,33,52,100,0,78,54,50,38],[200,181,119,1,37,109,21,32,48,76,78,0,73,55,32],[150,151,84,7,43,85,25,25,42,57,54,73,0,43,39],[119,112,64,4,34,68,22,28,32,59,50,55,43,0,32],[128,86,55,25,32,35,27,29,30,39,38,32,39,32,0]],"wilsonLower":[[null,41.0,51.8,46.2,52.6,42.5,40.2,36.3,46.8,46.1,42.2,54.1,31.2,34.3,44.5],[50.4,null,52.2,23.9,67.2,40.9,53.4,60.6,26.2,51.0,29.8,52.9,55.7,52.4,44.2],[40.0,36.9,null,34.6,52.9,31.5,51.6,40.0,39.6,45.7,33.9,53.2,53.6,44.1,28.1],[45.2,59.0,54.2,null,36.4,36.8,54.4,41.0,36.2,4.6,null,0,2.6,0,11.5],[37.2,18.8,34.2,51.9,null,31.7,52.1,36.6,41.0,34.1,47.0,11.4,26.4,14.6,45.3],[47.2,48.8,55.3,25.6,40.1,null,45.2,33.1,48.3,28.8,52.5,56.8,30.2,51.4,35.6],[48.1,27.9,32.6,32.4,30.9,28.2,null,48.2,32.8,26.3,19.9,13.8,40.7,26.9,37.3],[51.2,23.8,44.4,43.5,43.7,45.4,31.3,null,21.4,35.2,35.2,22.9,48.4,17.9,34.4],[40.3,55.8,41.5,47.5,38.9,29.3,49.5,52.1,null,24.2,40.5,32.6,46.8,33.6,16.7],[39.7,36.0,36.6,30.1,34.1,56.6,44.6,32.5,47.0,null,65.7,31.6,48.4,12.0,38.6],[43.7,54.8,47.9,null,24.2,29.1,54.7,32.5,33.3,17.5,null,39.2,27.0,22.4,21.2],[32.5,32.9,29.6,20.7,62.8,25.7,50.0,45.3,40.3,46.7,39.2,null,38.2,45.0,42.3],[53.3,29.2,26.3,48.7,45.6,49.4,23.4,17.2,25.0,27.1,47.8,39.5,null,34.6,38.6],[48.2,29.9,32.3,51.0,56.9,26.3,34.7,49.3,33.6,67.7,52.2,29.7,36.8,null,15.6],[38.4,35.3,46.8,56.6,22.9,33.0,27.6,31.4,52.1,31.6,49.9,25.5,31.6,54.6,null]],"wilsonUpper":[[null,49.6,60.0,54.8,62.8,52.8,51.9,48.8,59.7,60.3,56.3,67.5,46.7,51.8,61.6],[59.0,null,63.1,41.0,81.2,51.2,72.1,76.2,44.2,64.0,45.2,67.1,70.8,70.1,64.7],[48.2,47.8,null,45.8,65.8,44.7,67.4,55.6,58.5,63.4,52.1,70.4,73.7,67.7,53.2],[53.8,76.1,65.4,null,48.1,74.4,67.6,56.5,52.5,69.9,null,79.3,51.3,49.0,43.4],[47.4,32.8,47.1,63.6,null,59.9,69.1,56.3,61.1,65.9,75.8,37.2,54.4,43.1,77.1],[57.5,59.1,68.5,63.2,68.3,null,71.8,54.6,70.7,43.4,70.9,74.3,50.6,73.7,67.0],[59.8,46.6,48.4,45.6,47.9,54.8,null,68.7,50.5,55.4,45.3,50.0,76.6,65.3,72.4],[63.7,39.4,60.0,59.0,63.4,66.9,51.8,null,47.9,67.5,67.5,54.7,82.8,50.7,68.6],[53.2,73.8,60.4,63.8,59.0,51.7,67.2,78.6,null,53.0,66.7,59.7,75.0,66.4,47.9],[53.9,49.0,54.3,95.4,65.9,71.2,73.7,64.8,75.8,null,82.5,53.3,72.9,32.3,68.4],[57.8,70.2,66.1,null,53.0,47.5,80.1,64.8,59.5,34.3,null,60.8,52.2,47.8,50.1],[45.9,47.1,46.8,100,88.6,43.2,86.2,77.1,67.4,68.4,60.8,null,60.5,70.3,74.5],[68.8,44.3,46.4,97.4,73.6,69.8,59.3,51.6,53.2,51.6,73.0,61.8,null,63.2,68.4],[65.7,47.6,55.9,100,85.4,48.6,73.1,82.1,66.4,88.0,77.6,55.0,65.4,null,45.4],[55.5,55.8,71.9,88.5,54.7,64.4,62.7,65.6,83.3,61.4,78.8,57.7,61.4,84.4,null]],"stats":[{"name":"Izzet Lessons","playerCount":770,"overallWinrate":50.4,"totalMatches":4026,"metaShare":17.0,"skillSensitivity":1.51,"weightedWrRaw":50.4,"weightedWrAdj":48.9},{"name":"Mono-Green Landfall","playerCount":484,"overallWinrate":54.7,"totalMatches":2658,"metaShare":10.7,"skillSensitivity":2.52,"weightedWrRaw":54.5,"weightedWrAdj":53.2},{"name":"Dimir Midrange","playerCount":532,"overallWinrate":47.7,"totalMatches":2545,"metaShare":11.7,"skillSensitivity":1.67,"weightedWrRaw":48.4,"weightedWrAdj":49.5},{"name":"Simic Ouroboroid","playerCount":374,"overallWinrate":51.5,"totalMatches":1751,"metaShare":8.2,"skillSensitivity":3.52,"weightedWrRaw":45.7,"weightedWrAdj":45.8},{"name":"Jeskai Control","playerCount":343,"overallWinrate":45.6,"totalMatches":1569,"metaShare":7.6,"skillSensitivity":3.71,"weightedWrRaw":43.7,"weightedWrAdj":47.0},{"name":"Izzet Prowess","playerCount":324,"overallWinrate":53.6,"totalMatches":1743,"metaShare":7.1,"skillSensitivity":2.2,"weightedWrRaw":53.6,"weightedWrAdj":51.6},{"name":"Sultai Reanimator","playerCount":252,"overallWinrate":44.2,"totalMatches":1278,"metaShare":5.6,"skillSensitivity":3.81,"weightedWrRaw":43.4,"weightedWrAdj":46.5},{"name":"Mono-Red Aggro","playerCount":210,"overallWinrate":49.1,"totalMatches":1162,"metaShare":4.6,"skillSensitivity":1.82,"weightedWrRaw":48.9,"weightedWrAdj":50.8},{"name":"Bant Airbending","playerCount":195,"overallWinrate":51.8,"totalMatches":1140,"metaShare":4.3,"skillSensitivity":2.04,"weightedWrRaw":51.5,"weightedWrAdj":51.1},{"name":"Izzet Spellementals","playerCount":222,"overallWinrate":51.2,"totalMatches":1164,"metaShare":4.9,"skillSensitivity":3.49,"weightedWrRaw":52.7,"weightedWrAdj":50.6},{"name":"Simic Rhythm","playerCount":205,"overallWinrate":47.4,"totalMatches":1045,"metaShare":4.5,"skillSensitivity":3.16,"weightedWrRaw":48.7,"weightedWrAdj":49.0},{"name":"Dimir Excruciator","playerCount":218,"overallWinrate":46.4,"totalMatches":1062,"metaShare":4.8,"skillSensitivity":3.29,"weightedWrRaw":53.7,"weightedWrAdj":52.5},{"name":"Azorius Tempo","playerCount":169,"overallWinrate":48.7,"totalMatches":878,"metaShare":3.7,"skillSensitivity":1.74,"weightedWrRaw":51.4,"weightedWrAdj":52.6},{"name":"Izzet Elementals","playerCount":125,"overallWinrate":51.8,"totalMatches":722,"metaShare":2.8,"skillSensitivity":3.46,"weightedWrRaw":56.7,"weightedWrAdj":53.8},{"name":"Boros Dragons","playerCount":113,"overallWinrate":51.7,"totalMatches":627,"metaShare":2.5,"skillSensitivity":1.61,"weightedWrRaw":52.3,"weightedWrAdj":54.3}],"meta":{"totalPlayers":4536,"totalMatches":11685,"eloMatchRate":95.0,"classifiedMatches":11685,"tournamentCount":161,"dateRange":["2026-01-01","2026-03-16"]}},"mtgo":{"archetypes":["Mono-Green Landfall","Izzet Lessons","Simic Rhythm","Dimir Excruciator","Izzet Spellementals","Izzet Prowess","Izzet Elementals","Dimir Midrange","Azorius Tempo","Selesnya Landfall","Dimir Control","Boros Dragons","Rakdos Monument","Jeskai Control","Temur Lessons"],"rawMatrix":[[null,43.8,38.5,41.7,60.0,33.3,50.0,25.0,50.0,100.0,0.0,100.0,66.7,0.0,50.0],[56.2,null,42.9,68.8,100.0,33.3,28.6,33.3,100.0,0.0,100.0,null,100.0,100.0,null],[61.5,57.1,null,60.0,0.0,0.0,33.3,60.0,0.0,100.0,0.0,50.0,100.0,null,0.0],[58.3,31.2,40.0,null,0.0,0.0,100.0,null,null,null,100.0,100.0,100.0,null,null],[40.0,0.0,100.0,100.0,null,100.0,null,null,null,100.0,null,50.0,null,null,0.0],[66.7,66.7,100.0,100.0,0.0,null,100.0,0.0,0.0,null,null,100.0,null,100.0,100.0],[50.0,71.4,66.7,0.0,null,0.0,null,0.0,100.0,null,null,null,null,null,null],[75.0,66.7,40.0,null,null,100.0,100.0,null,100.0,null,null,null,0.0,null,0.0],[50.0,0.0,100.0,null,null,100.0,0.0,0.0,null,50.0,null,0.0,null,100.0,0.0],[0.0,100.0,0.0,null,0.0,null,null,null,50.0,null,null,null,null,null,null],[100.0,0.0,100.0,0.0,null,null,null,null,null,null,null,null,null,0.0,null],[0.0,null,50.0,0.0,50.0,0.0,null,null,100.0,null,null,null,null,100.0,null],[33.3,0.0,0.0,0.0,null,null,null,100.0,null,null,null,null,null,null,null],[100.0,0.0,null,null,null,0.0,null,null,0.0,null,100.0,0.0,null,null,null],[50.0,null,100.0,null,100.0,0.0,null,100.0,100.0,null,null,null,null,null,null]],"adjustedMatrix":[[null,44.1,47.0,46.2,57.4,46.7,62.9,36.6,63.1,88.2,-11.5,99.9,55.5,-8.1,58.2],[55.9,null,54.9,74.1,83.5,59.1,33.3,34.0,102.7,4.4,90.1,null,85.0,95.2,null],[53.0,45.1,null,61.7,2.4,8.0,43.1,53.4,-0.3,96.8,-2.9,49.0,86.1,null,12.6],[53.8,25.9,38.3,null,-3.0,29.4,102.0,null,null,null,76.4,98.4,91.8,null,null],[42.6,16.5,97.6,103.0,null,98.3,null,null,null,95.5,null,49.2,null,null,9.8],[53.3,40.9,92.0,70.6,1.7,null,63.8,6.2,-41.3,null,null,81.3,null,58.7,60.5],[37.1,66.7,56.9,-2.0,null,36.2,null,-0.5,92.6,null,null,null,null,null,null],[63.4,66.0,46.6,null,null,93.8,100.5,null,89.4,null,null,null,-24.7,null,2.8],[36.9,-2.7,100.3,null,null,141.3,7.4,10.6,null,47.3,null,5.0,null,83.7,5.1],[11.8,95.6,3.2,null,4.5,null,null,null,52.7,null,null,null,null,null,null],[111.5,9.9,102.9,23.6,null,null,null,null,null,null,null,null,null,2.2,null],[0.1,null,51.0,1.6,50.8,18.7,null,null,95.0,null,null,null,null,96.0,null],[44.5,15.0,13.9,8.2,null,null,null,124.7,null,null,null,null,null,null,null],[108.1,4.8,null,null,null,41.3,null,null,16.3,null,97.8,4.0,null,null,null],[41.8,null,87.4,null,90.2,39.5,null,97.2,94.9,null,null,null,null,null,null]],"deltaMatrix":[[null,0.3,8.5,4.5,-2.6,13.4,12.9,11.6,13.1,-11.8,-11.5,-0.1,-11.2,-8.1,8.2],[-0.3,null,12.0,5.3,-16.5,25.8,4.7,0.7,2.7,4.4,-9.9,null,-15.0,-4.8,null],[-8.5,-12.0,null,1.7,2.4,8.0,9.8,-6.6,-0.3,-3.2,-2.9,-1.0,-13.9,null,12.6],[-4.5,-5.3,-1.7,null,-3.0,29.4,2.0,null,null,null,-23.6,-1.6,-8.2,null,null],[2.6,16.5,-2.4,3.0,null,-1.7,null,null,null,-4.5,null,-0.8,null,null,9.8],[-13.4,-25.8,-8.0,-29.4,1.7,null,-36.2,6.2,-41.3,null,null,-18.7,null,-41.3,-39.5],[-12.9,-4.7,-9.8,-2.0,null,36.2,null,-0.5,-7.4,null,null,null,null,null,null],[-11.6,-0.7,6.6,null,null,-6.2,0.5,null,-10.6,null,null,null,-24.7,null,2.8],[-13.1,-2.7,0.3,null,null,41.3,7.4,10.6,null,-2.7,null,5.0,null,-16.3,5.1],[11.8,-4.4,3.2,null,4.5,null,null,null,2.7,null,null,null,null,null,null],[11.5,9.9,2.9,23.6,null,null,null,null,null,null,null,null,null,2.2,null],[0.1,null,1.0,1.6,0.8,18.7,null,null,-5.0,null,null,null,null,-4.0,null],[11.2,15.0,13.9,8.2,null,null,null,24.7,null,null,null,null,null,null,null],[8.1,4.8,null,null,null,41.3,null,null,16.3,null,-2.2,4.0,null,null,null],[-8.2,null,-12.6,null,-9.8,39.5,null,-2.8,-5.1,null,null,null,null,null,null]],"sampleSizes":[[0,32,13,12,10,6,6,4,4,2,1,1,3,1,4],[32,0,21,16,4,3,7,6,3,1,2,0,3,1,0],[13,21,0,5,4,2,3,5,3,2,1,2,2,0,1],[12,16,5,0,1,2,1,0,0,0,3,1,1,0,0],[10,4,4,1,0,1,0,0,0,3,0,2,0,0,1],[6,3,2,2,1,0,2,1,1,0,0,1,0,1,1],[6,7,3,1,0,2,0,1,1,0,0,0,0,0,0],[4,6,5,0,0,1,1,0,1,0,0,0,1,0,1],[4,3,3,0,0,1,1,1,0,2,0,1,0,1,1],[2,1,2,0,3,0,0,0,2,0,0,0,0,0,0],[1,2,1,3,0,0,0,0,0,0,0,0,0,1,0],[1,0,2,1,2,1,0,0,1,0,0,0,0,1,0],[3,3,2,1,0,0,0,1,0,0,0,0,0,0,0],[1,1,0,0,0,1,0,0,1,0,1,1,0,0,0],[4,0,1,0,1,1,0,1,1,0,0,0,0,0,0]],"wilsonLower":[[null,28.2,17.7,19.3,31.3,9.7,18.8,4.6,15.0,34.2,0,20.7,20.8,0,15.0],[39.3,null,24.5,44.4,51.0,6.1,8.2,9.7,43.8,0,34.2,null,43.8,20.7,null],[35.5,36.5,null,23.1,0,0,6.1,23.1,0,34.2,0,9.5,34.2,null,0],[32.0,14.2,11.8,null,0,0,20.7,null,null,null,43.8,20.7,20.7,null,null],[16.8,0,51.0,20.7,null,20.7,null,null,null,43.8,null,9.5,null,null,0],[30.0,20.8,34.2,34.2,0,null,34.2,0,0,null,null,20.7,null,20.7,20.7],[18.8,35.9,20.8,0,null,0,null,0,20.7,null,null,null,null,null,null],[30.1,30.0,11.8,null,null,20.7,20.7,null,20.7,null,null,null,0,null,0],[15.0,0,43.8,null,null,20.7,0,0,null,9.5,null,0,null,20.7,0],[0,20.7,0,null,0,null,null,null,9.5,null,null,null,null,null,null],[20.7,0,20.7,0,null,null,null,null,null,null,null,null,null,0,null],[0,null,9.5,0,9.5,0,null,null,20.7,null,null,null,null,20.7,null],[6.1,0,0,0,null,null,null,20.7,null,null,null,null,null,null,null],[20.7,0,null,null,null,0,null,null,0,null,20.7,0,null,null,null],[15.0,null,20.7,null,20.7,0,null,20.7,20.7,null,null,null,null,null,null]],"wilsonUpper":[[null,60.7,64.5,68.0,83.2,70.0,81.2,69.9,85.0,100,79.3,100,93.9,79.3,85.0],[71.8,null,63.5,85.8,100,79.2,64.1,70.0,100,79.3,100,null,100,100,null],[82.3,75.5,null,88.2,49.0,65.8,79.2,88.2,56.2,100,79.3,90.5,100,null,79.3],[80.7,55.6,76.9,null,79.3,65.8,100,null,null,null,100,100,100,null,null],[68.7,49.0,100,100,null,100,null,null,null,100,null,90.5,null,null,79.3],[90.3,93.9,100,100,79.3,null,100,79.3,79.3,null,null,100,null,100,100],[81.2,91.8,93.9,79.3,null,65.8,null,79.3,100,null,null,null,null,null,null],[95.4,90.3,76.9,null,null,100,100,null,100,null,null,null,79.3,null,79.3],[85.0,56.2,100,null,null,100,79.3,79.3,null,90.5,null,79.3,null,100,79.3],[65.8,100,65.8,null,56.2,null,null,null,90.5,null,null,null,null,null,null],[100,65.8,100,56.2,null,null,null,null,null,null,null,null,null,79.3,null],[79.3,null,90.5,79.3,90.5,79.3,null,null,100,null,null,null,null,100,null],[79.2,56.2,65.8,79.3,null,null,null,100,null,null,null,null,null,null,null],[100,79.3,null,null,null,79.3,null,null,79.3,null,100,79.3,null,null,null],[85.0,null,100,null,100,79.3,null,100,100,null,null,null,null,null,null]],"stats":[{"name":"Mono-Green Landfall","playerCount":25,"overallWinrate":45.5,"totalMatches":99,"metaShare":24.5,"skillSensitivity":8.41,"weightedWrRaw":44.5,"weightedWrAdj":47.5},{"name":"Izzet Lessons","playerCount":22,"overallWinrate":56.6,"totalMatches":99,"metaShare":21.6,"skillSensitivity":8.51,"weightedWrRaw":58.5,"weightedWrAdj":60.8},{"name":"Simic Rhythm","playerCount":14,"overallWinrate":50.0,"totalMatches":64,"metaShare":13.7,"skillSensitivity":6.38,"weightedWrRaw":50.6,"weightedWrAdj":45.1},{"name":"Dimir Excruciator","playerCount":8,"overallWinrate":47.6,"totalMatches":42,"metaShare":7.8,"skillSensitivity":8.81,"weightedWrRaw":48.8,"weightedWrAdj":45.4},{"name":"Izzet Spellementals","playerCount":4,"overallWinrate":53.8,"totalMatches":26,"metaShare":3.9,"skillSensitivity":5.16,"weightedWrRaw":49.9,"weightedWrAdj":55.1},{"name":"Izzet Prowess","playerCount":3,"overallWinrate":71.4,"totalMatches":21,"metaShare":2.9,"skillSensitivity":23.77,"weightedWrRaw":69.3,"weightedWrAdj":50.6},{"name":"Izzet Elementals","playerCount":4,"overallWinrate":52.4,"totalMatches":21,"metaShare":3.9,"skillSensitivity":10.5,"weightedWrRaw":52.0,"weightedWrAdj":45.7},{"name":"Dimir Midrange","playerCount":4,"overallWinrate":60.0,"totalMatches":20,"metaShare":3.9,"skillSensitivity":7.96,"weightedWrRaw":65.8,"weightedWrAdj":61.3},{"name":"Azorius Tempo","playerCount":4,"overallWinrate":44.4,"totalMatches":18,"metaShare":3.9,"skillSensitivity":10.45,"weightedWrRaw":41.2,"weightedWrAdj":38.5},{"name":"Selesnya Landfall","playerCount":3,"overallWinrate":20.0,"totalMatches":10,"metaShare":2.9,"skillSensitivity":5.32,"weightedWrRaw":34.8,"weightedWrAdj":38.8},{"name":"Dimir Control","playerCount":3,"overallWinrate":25.0,"totalMatches":8,"metaShare":2.9,"skillSensitivity":10.02,"weightedWrRaw":54.9,"weightedWrAdj":65.3},{"name":"Boros Dragons","playerCount":2,"overallWinrate":44.4,"totalMatches":9,"metaShare":2.0,"skillSensitivity":4.46,"weightedWrRaw":25.0,"weightedWrAdj":26.0},{"name":"Rakdos Monument","playerCount":3,"overallWinrate":20.0,"totalMatches":10,"metaShare":2.9,"skillSensitivity":14.6,"weightedWrRaw":16.9,"weightedWrAdj":30.1},{"name":"Jeskai Control","playerCount":2,"overallWinrate":33.3,"totalMatches":6,"metaShare":2.0,"skillSensitivity":12.78,"weightedWrRaw":47.4,"weightedWrAdj":55.8},{"name":"Temur Lessons","playerCount":1,"overallWinrate":66.7,"totalMatches":9,"metaShare":1.0,"skillSensitivity":13.0,"weightedWrRaw":71.3,"weightedWrAdj":65.1}],"meta":{"totalPlayers":102,"totalMatches":231,"eloMatchRate":96.1,"classifiedMatches":231,"tournamentCount":88}},"tabletop":{"archetypes":["Izzet Lessons","Dimir Midrange","Mono-Green Landfall","Simic Ouroboroid","Jeskai Control","Izzet Prowess","Sultai Reanimator","Mono-Red Aggro","Bant Airbending","Izzet Spellementals","Dimir Excruciator","Simic Rhythm","Azorius Tempo","Izzet Elementals","Boros Dragons"],"rawMatrix":[[null,56.2,44.6,50.5,57.6,47.8,46.0,42.4,53.3,52.2,60.3,50.0,37.4,43.8,53.1],[43.8,null,41.8,40.1,59.5,37.6,59.7,47.7,48.0,54.7,62.2,42.9,63.9,55.6,40.0],[55.4,58.2,null,31.8,75.3,46.2,63.5,68.7,34.0,57.5,61.5,37.0,63.9,62.3,54.1],[49.5,59.9,68.2,null,42.1,56.5,61.2,48.7,44.2,25.0,0.0,null,14.3,0.0,24.0],[42.4,40.5,24.7,57.9,null,46.5,60.7,46.3,50.5,50.0,21.6,62.5,40.5,26.5,64.5],[52.2,62.4,53.8,43.5,53.5,null,59.2,43.6,59.4,36.0,65.4,61.4,40.5,62.1,50.0],[54.0,40.3,36.5,38.8,39.3,40.8,null,58.8,41.4,40.0,28.6,31.2,60.0,45.5,55.6],[57.6,52.3,31.3,51.3,53.7,56.4,41.2,null,33.3,51.5,38.7,53.1,68.0,32.1,51.7],[46.7,52.0,66.0,55.8,49.5,40.6,58.6,66.7,null,37.5,45.8,52.0,61.9,51.6,30.0],[47.8,45.3,42.5,75.0,50.0,64.0,60.0,48.5,62.5,null,41.3,74.0,61.4,20.3,54.1],[39.7,37.8,38.5,100.0,78.4,34.6,71.4,61.3,54.2,58.7,null,50.7,49.3,57.4,58.1],[50.0,57.1,63.0,null,37.5,38.6,68.8,46.9,48.0,26.0,49.3,null,41.2,34.0,33.3],[62.6,36.1,36.1,85.7,59.5,59.5,40.0,32.0,38.1,38.6,50.7,58.8,null,50.0,55.3],[56.2,44.4,37.7,100.0,73.5,37.9,54.5,67.9,48.4,79.7,42.6,66.0,50.0,null,28.1],[46.9,60.0,45.9,76.0,35.5,50.0,44.4,48.3,70.0,45.9,41.9,66.7,44.7,71.9,null]],"adjustedMatrix":[[null,53.4,43.1,50.3,54.6,47.8,43.0,40.0,52.8,51.8,58.0,49.2,36.9,43.5,48.9],[46.6,null,44.3,42.9,57.9,41.1,57.6,46.2,48.4,56.4,61.8,44.5,62.0,56.1,40.2],[56.9,55.7,null,33.2,70.8,47.8,57.7,64.1,32.7,56.8,58.2,36.2,60.7,60.3,48.9],[49.7,57.1,66.8,null,40.8,57.5,59.3,45.7,45.2,24.8,5.8,null,12.3,23.1,21.9],[45.4,42.1,29.2,59.2,null,49.9,59.4,46.8,54.2,57.0,31.7,66.0,43.8,34.3,64.2],[52.2,58.9,52.2,42.5,50.1,null,57.7,40.8,57.9,36.5,61.6,57.9,37.8,63.2,48.0],[57.0,42.4,42.3,40.7,40.6,42.3,null,56.9,45.2,51.6,35.9,38.2,58.1,49.7,54.6],[60.0,53.8,35.9,54.3,53.2,59.2,43.1,null,36.3,52.1,40.5,53.3,66.9,33.5,51.4],[47.2,51.6,67.3,54.8,45.8,42.1,54.8,63.7,null,42.5,46.6,46.7,61.1,49.9,29.6],[48.2,43.6,43.2,75.2,43.0,63.5,48.4,47.9,57.5,null,39.9,63.7,58.2,23.1,50.6],[42.0,38.2,41.8,94.2,68.3,38.4,64.1,59.5,53.4,60.1,null,44.8,48.1,55.5,57.5],[50.8,55.5,63.8,null,34.0,42.1,61.8,46.7,53.3,36.3,55.2,null,41.3,35.1,31.8],[63.1,38.0,39.3,87.7,56.2,62.2,41.9,33.1,38.9,41.8,51.9,58.7,null,51.5,54.9],[56.5,43.9,39.7,76.9,65.7,36.8,50.3,66.5,50.1,76.9,44.5,64.9,48.5,null,29.0],[51.1,59.8,51.1,78.1,35.8,52.0,45.4,48.6,70.4,49.4,42.5,68.2,45.1,71.0,null]],"deltaMatrix":[[null,-2.8,-1.5,-0.2,-3.0,0.0,-3.0,-2.4,-0.5,-0.4,-2.3,-0.8,-0.5,-0.3,-4.2],[2.8,null,2.5,2.8,-1.6,3.5,-2.1,-1.5,0.4,1.7,-0.4,1.6,-1.9,0.5,0.2],[1.5,-2.5,null,1.4,-4.5,1.6,-5.8,-4.6,-1.3,-0.7,-3.3,-0.8,-3.2,-2.0,-5.2],[0.2,-2.8,-1.4,null,-1.3,1.0,-1.9,-3.0,1.0,-0.2,5.8,null,-2.0,23.1,-2.1],[3.0,1.6,4.5,1.3,null,3.4,-1.3,0.5,3.7,7.0,10.1,3.5,3.3,7.8,-0.3],[0.0,-3.5,-1.6,-1.0,-3.4,null,-1.5,-2.8,-1.5,0.5,-3.8,-3.5,-2.7,1.1,-2.0],[3.0,2.1,5.8,1.9,1.3,1.5,null,-1.9,3.8,11.6,7.3,7.0,-1.9,4.2,-1.0],[2.4,1.5,4.6,3.0,-0.5,2.8,1.9,null,3.0,0.6,1.8,0.2,-1.1,1.4,-0.3],[0.5,-0.4,1.3,-1.0,-3.7,1.5,-3.8,-3.0,null,5.0,0.8,-5.3,-0.8,-1.7,-0.4],[0.4,-1.7,0.7,0.2,-7.0,-0.5,-11.6,-0.6,-5.0,null,-1.4,-10.3,-3.2,2.8,-3.5],[2.3,0.4,3.3,-5.8,-10.1,3.8,-7.3,-1.8,-0.8,1.4,null,-5.9,-1.2,-1.9,-0.6],[0.8,-1.6,0.8,null,-3.5,3.5,-7.0,-0.2,5.3,10.3,5.9,null,0.1,1.1,-1.5],[0.5,1.9,3.2,2.0,-3.3,2.7,1.9,1.1,0.8,3.2,1.2,-0.1,null,1.5,-0.4],[0.3,-0.5,2.0,-23.1,-7.8,-1.1,-4.2,-1.4,1.7,-2.8,1.9,-1.1,-1.5,null,0.9],[4.2,-0.2,5.2,2.1,0.3,2.0,1.0,0.3,0.4,3.5,0.6,1.5,0.4,-0.9,null]],"sampleSizes":[[0,566,478,517,354,356,274,238,227,182,184,170,147,112,128],[566,0,306,287,220,205,144,153,102,117,119,105,83,63,55],[478,306,0,110,146,346,96,131,103,207,169,135,147,106,85],[517,287,110,0,273,23,206,156,138,4,1,0,7,4,25],[354,220,146,273,0,43,122,95,91,34,37,40,42,34,31],[356,205,346,23,43,0,49,78,69,161,107,101,84,66,34],[274,144,96,206,122,49,0,85,116,40,21,48,25,22,27],[238,153,131,156,95,78,85,0,45,33,31,32,25,28,29],[227,102,103,138,91,69,116,45,0,40,48,50,42,31,30],[182,117,207,4,34,161,40,33,40,0,75,96,57,59,37],[184,119,169,1,37,107,21,31,48,75,0,73,73,54,31],[170,105,135,0,40,101,48,32,50,96,73,0,51,47,36],[147,83,147,7,42,84,25,25,42,57,73,51,0,42,38],[112,63,106,4,34,66,22,28,31,59,54,47,42,0,32],[128,55,85,25,31,34,27,29,30,37,31,36,38,32,0]],"wilsonLower":[[null,52.1,40.2,46.2,52.4,42.6,40.2,36.3,46.8,45.0,53.1,42.6,30.0,34.9,44.5],[39.8,null,36.4,34.6,52.9,31.2,51.6,40.0,38.6,45.7,53.2,33.8,53.1,43.3,28.1],[51.0,52.6,null,23.9,67.8,41.1,53.6,60.3,25.6,50.7,54.0,29.4,55.9,52.8,43.6],[45.2,54.2,59.0,null,36.4,36.8,54.4,41.0,36.2,4.6,0,null,2.6,0,11.5],[37.3,34.2,18.4,51.9,null,32.5,51.8,36.6,40.5,34.1,11.4,47.0,27.0,14.6,46.9],[47.1,55.6,48.5,25.6,38.9,null,45.2,33.1,47.6,29.0,56.0,51.6,30.6,50.1,34.1],[48.1,32.6,27.5,32.4,31.1,28.2,null,48.2,32.8,26.3,13.8,19.9,40.7,26.9,37.3],[51.2,44.4,24.0,43.5,43.7,45.4,31.3,null,21.4,35.2,23.7,36.4,48.4,17.9,34.4],[40.3,42.4,56.4,47.5,39.4,29.8,49.5,52.1,null,24.2,32.6,38.5,46.8,34.8,16.7],[40.7,36.6,36.0,30.1,34.1,56.3,44.6,32.5,47.0,null,30.9,64.4,48.4,12.0,38.4],[32.9,29.6,31.5,20.7,62.8,26.2,50.0,43.8,40.3,47.4,null,39.5,38.2,44.2,40.8],[42.6,47.6,54.6,null,24.2,29.7,54.7,30.9,34.8,18.3,38.2,null,28.8,22.2,20.2],[54.5,26.6,28.7,48.7,44.5,48.8,23.4,17.2,25.0,27.1,39.5,45.2,null,35.5,39.7],[47.0,32.8,29.1,51.0,56.9,27.1,34.7,49.3,32.0,67.7,30.3,51.7,35.5,null,15.6],[38.4,46.8,35.7,56.6,21.1,34.1,27.6,31.4,52.1,31.0,26.4,50.3,30.1,54.6,null]],"wilsonUpper":[[null,60.2,49.0,54.8,62.7,52.9,51.9,48.8,59.7,59.3,67.1,57.4,45.5,53.0,61.6],[47.9,null,47.4,45.8,65.8,44.4,67.4,55.6,57.6,63.4,70.4,52.4,73.4,67.2,53.2],[59.8,63.6,null,41.0,81.6,51.5,72.5,76.0,43.6,64.0,68.5,45.4,71.3,70.9,64.3],[53.8,65.4,76.1,null,48.1,74.4,67.6,56.5,52.5,69.9,79.3,null,51.3,49.0,43.4],[47.6,47.1,32.2,63.6,null,61.1,68.9,56.3,60.6,65.9,37.2,75.8,55.5,43.1,78.9],[57.4,68.8,58.9,63.2,67.5,null,71.8,54.6,70.2,43.7,73.8,70.3,51.2,72.9,65.9],[59.8,48.4,46.4,45.6,48.2,54.8,null,68.7,50.5,55.4,50.0,45.3,76.6,65.3,72.4],[63.7,60.0,39.7,59.0,63.4,66.9,51.8,null,47.9,67.5,56.2,69.1,82.8,50.7,68.6],[53.2,61.4,74.4,63.8,59.5,52.4,67.2,78.6,null,53.0,59.7,65.2,75.0,68.0,47.9],[55.0,54.3,49.3,95.4,65.9,71.0,73.7,64.8,75.8,null,52.6,81.7,72.9,32.3,69.0],[46.9,46.8,46.0,100,88.6,44.0,86.2,76.3,67.4,69.1,null,61.8,60.5,69.7,73.6],[57.4,66.2,70.6,null,53.0,48.4,80.1,63.6,61.5,35.6,60.5,null,54.8,48.3,49.7],[70.0,46.9,44.1,97.4,73.0,69.4,59.3,51.6,53.2,51.6,61.8,71.2,null,64.5,69.9],[65.1,56.7,47.2,100,85.4,49.9,73.1,82.1,65.2,88.0,55.8,77.8,64.5,null,45.4],[55.5,71.9,56.4,88.5,53.1,65.9,62.7,65.6,83.3,61.6,59.2,79.8,60.3,84.4,null]],"stats":[{"name":"Izzet Lessons","playerCount":751,"overallWinrate":50.3,"totalMatches":3933,"metaShare":16.9,"skillSensitivity":1.56,"weightedWrRaw":50.3,"weightedWrAdj":48.7},{"name":"Dimir Midrange","playerCount":529,"overallWinrate":47.5,"totalMatches":2525,"metaShare":11.9,"skillSensitivity":1.68,"weightedWrRaw":48.2,"weightedWrAdj":49.3},{"name":"Mono-Green Landfall","playerCount":462,"overallWinrate":55.1,"totalMatches":2565,"metaShare":10.4,"skillSensitivity":2.74,"weightedWrRaw":54.8,"weightedWrAdj":53.3},{"name":"Simic Ouroboroid","playerCount":374,"overallWinrate":51.5,"totalMatches":1751,"metaShare":8.4,"skillSensitivity":3.52,"weightedWrRaw":45.7,"weightedWrAdj":45.8},{"name":"Jeskai Control","playerCount":341,"overallWinrate":45.6,"totalMatches":1562,"metaShare":7.7,"skillSensitivity":3.66,"weightedWrRaw":43.9,"weightedWrAdj":47.1},{"name":"Izzet Prowess","playerCount":321,"overallWinrate":53.4,"totalMatches":1722,"metaShare":7.2,"skillSensitivity":2.06,"weightedWrRaw":53.4,"weightedWrAdj":51.6},{"name":"Sultai Reanimator","playerCount":252,"overallWinrate":44.2,"totalMatches":1275,"metaShare":5.7,"skillSensitivity":3.88,"weightedWrRaw":43.4,"weightedWrAdj":46.6},{"name":"Mono-Red Aggro","playerCount":209,"overallWinrate":49.2,"totalMatches":1159,"metaShare":4.7,"skillSensitivity":1.79,"weightedWrRaw":49.1,"weightedWrAdj":51.0},{"name":"Bant Airbending","playerCount":194,"overallWinrate":52.0,"totalMatches":1132,"metaShare":4.4,"skillSensitivity":2.09,"weightedWrRaw":51.7,"weightedWrAdj":51.2},{"name":"Izzet Spellementals","playerCount":218,"overallWinrate":51.2,"totalMatches":1142,"metaShare":4.9,"skillSensitivity":3.49,"weightedWrRaw":52.9,"weightedWrAdj":50.6},{"name":"Dimir Excruciator","playerCount":212,"overallWinrate":46.5,"totalMatches":1023,"metaShare":4.8,"skillSensitivity":3.33,"weightedWrRaw":53.8,"weightedWrAdj":52.7},{"name":"Simic Rhythm","playerCount":191,"overallWinrate":47.4,"totalMatches":984,"metaShare":4.3,"skillSensitivity":3.2,"weightedWrRaw":48.7,"weightedWrAdj":49.4},{"name":"Azorius Tempo","playerCount":165,"overallWinrate":48.8,"totalMatches":863,"metaShare":3.7,"skillSensitivity":1.7,"weightedWrRaw":51.5,"weightedWrAdj":52.8},{"name":"Izzet Elementals","playerCount":122,"overallWinrate":51.7,"totalMatches":700,"metaShare":2.7,"skillSensitivity":3.59,"weightedWrRaw":56.7,"weightedWrAdj":53.8},{"name":"Boros Dragons","playerCount":111,"overallWinrate":51.8,"totalMatches":618,"metaShare":2.5,"skillSensitivity":1.61,"weightedWrRaw":52.4,"weightedWrAdj":54.3}],"meta":{"totalPlayers":4452,"totalMatches":11477,"eloMatchRate":95.0,"classifiedMatches":11477,"tournamentCount":73}}},{"format":"Legacy","all":{"archetypes":["Dimir Tempo","Izzet Affinity","Sultai Doomsday","Mono-Red Eldrazi","Bant Beanstalk","Izzet Delver","W-U-B-R-G Sneak and Show","W-U-B-G Omni-Tell","U-B-R-G Oops! All Spells","Mono-Green Lands","Azorius Stoneblade","Orzhov Death and Taxes (Yorion)","Dimir","Esper Cephalid Breakfast","W-U-B-G Cradle Control"],"rawMatrix":[[null,30.8,50.0,60.0,50.0,30.0,50.0,40.0,85.7,36.4,0.0,50.0,62.5,85.7,33.3],[69.2,null,66.7,0.0,66.7,75.0,100.0,66.7,33.3,33.3,50.0,33.3,100.0,100.0,0.0],[50.0,33.3,null,33.3,100.0,100.0,66.7,66.7,0.0,0.0,66.7,66.7,null,0.0,0.0],[40.0,100.0,66.7,null,50.0,60.0,50.0,100.0,50.0,100.0,100.0,100.0,0.0,100.0,0.0],[50.0,33.3,0.0,50.0,null,0.0,33.3,null,0.0,null,0.0,null,66.7,null,100.0],[70.0,25.0,0.0,40.0,100.0,null,0.0,null,0.0,null,100.0,50.0,null,50.0,100.0],[50.0,0.0,33.3,50.0,66.7,100.0,null,0.0,100.0,0.0,null,0.0,0.0,null,null],[60.0,33.3,33.3,0.0,null,null,100.0,null,0.0,0.0,null,0.0,100.0,0.0,100.0],[14.3,66.7,100.0,50.0,100.0,100.0,0.0,100.0,null,0.0,50.0,100.0,50.0,0.0,0.0],[63.6,66.7,100.0,0.0,null,null,100.0,100.0,100.0,null,null,0.0,100.0,100.0,100.0],[100.0,50.0,33.3,0.0,100.0,0.0,null,null,50.0,null,null,100.0,66.7,50.0,null],[50.0,66.7,33.3,0.0,null,50.0,100.0,100.0,0.0,100.0,0.0,null,null,0.0,100.0],[37.5,0.0,null,100.0,33.3,null,100.0,0.0,50.0,0.0,33.3,null,null,0.0,100.0],[14.3,0.0,100.0,0.0,null,50.0,null,100.0,100.0,0.0,50.0,100.0,100.0,null,50.0],[66.7,100.0,100.0,100.0,0.0,0.0,null,0.0,100.0,0.0,null,0.0,0.0,50.0,null]],"adjustedMatrix":[[null,30.9,52.1,62.0,52.0,30.3,46.2,41.2,86.0,40.1,11.4,48.3,60.3,81.7,34.9],[69.1,null,64.3,9.0,67.0,65.8,100.9,67.4,40.4,35.1,58.2,36.4,100.1,96.6,4.1],[47.9,35.7,null,40.8,102.9,93.7,65.4,55.8,4.3,6.6,69.7,66.0,null,10.9,4.9],[38.0,91.0,59.2,null,58.4,53.0,52.6,90.6,47.2,90.3,91.3,97.6,-4.7,91.3,0.3],[48.0,33.0,-2.9,41.6,null,10.9,22.3,null,-1.7,null,2.2,null,64.5,null,82.6],[69.7,34.2,6.3,47.0,89.1,null,3.4,null,20.3,null,112.9,53.7,null,46.9,93.5],[53.8,-0.9,34.6,47.4,77.7,96.6,null,2.0,99.4,4.6,null,5.9,-11.9,null,null],[58.8,32.6,44.2,9.4,null,null,98.0,null,8.5,4.9,null,9.8,95.8,0.3,94.4],[14.0,59.6,95.7,52.8,101.7,79.7,0.6,91.5,null,-7.5,50.9,93.6,56.5,8.9,-18.3],[59.9,64.9,93.4,9.7,null,null,95.4,95.1,107.5,null,null,10.6,89.0,91.2,105.1],[88.6,41.8,30.3,8.7,97.8,-12.9,null,null,49.1,null,null,101.2,61.9,55.7,null],[51.7,63.6,34.0,2.4,null,46.3,94.1,90.2,6.4,89.4,-1.2,null,null,2.2,99.8],[39.7,-0.1,null,104.7,35.5,null,111.9,4.2,43.5,11.0,38.1,null,null,8.8,89.0],[18.3,3.4,89.1,8.7,null,53.1,null,99.7,91.1,8.8,44.3,97.8,91.2,null,53.5],[65.1,95.9,95.1,99.7,17.4,6.5,null,5.6,118.3,-5.1,null,0.2,11.0,46.5,null]],"deltaMatrix":[[null,0.1,2.1,2.0,2.0,0.3,-3.8,1.2,0.3,3.7,11.4,-1.7,-2.2,-4.0,1.6],[-0.1,null,-2.4,9.0,0.3,-9.2,0.9,0.7,7.1,1.8,8.2,3.1,0.1,-3.4,4.1],[-2.1,2.4,null,7.5,2.9,-6.3,-1.3,-10.9,4.3,6.6,3.0,-0.7,null,10.9,4.9],[-2.0,-9.0,-7.5,null,8.4,-7.0,2.6,-9.4,-2.8,-9.7,-8.7,-2.4,-4.7,-8.7,0.3],[-2.0,-0.3,-2.9,-8.4,null,10.9,-11.0,null,-1.7,null,2.2,null,-2.2,null,-17.4],[-0.3,9.2,6.3,7.0,-10.9,null,3.4,null,20.3,null,12.9,3.7,null,-3.1,-6.5],[3.8,-0.9,1.3,-2.6,11.0,-3.4,null,2.0,-0.6,4.6,null,5.9,-11.9,null,null],[-1.2,-0.7,10.9,9.4,null,null,-2.0,null,8.5,4.9,null,9.8,-4.2,0.3,-5.6],[-0.3,-7.1,-4.3,2.8,1.7,-20.3,0.6,-8.5,null,-7.5,0.9,-6.4,6.5,8.9,-18.3],[-3.7,-1.8,-6.6,9.7,null,null,-4.6,-4.9,7.5,null,null,10.6,-11.0,-8.8,5.1],[-11.4,-8.2,-3.0,8.7,-2.2,-12.9,null,null,-0.9,null,null,1.2,-4.8,5.7,null],[1.7,-3.1,0.7,2.4,null,-3.7,-5.9,-9.8,6.4,-10.6,-1.2,null,null,2.2,-0.2],[2.2,-0.1,null,4.7,2.2,null,11.9,4.2,-6.5,11.0,4.8,null,null,8.8,-11.0],[4.0,3.4,-10.9,8.7,null,3.1,null,-0.3,-8.9,8.8,-5.7,-2.2,-8.8,null,3.5],[-1.6,-4.1,-4.9,-0.3,17.4,6.5,null,5.6,18.3,-5.1,null,0.2,11.0,-3.5,null]],"sampleSizes":[[0,13,10,10,8,10,8,10,7,11,5,4,8,7,6],[13,0,6,2,3,4,3,3,3,6,2,3,1,2,5],[10,6,0,3,2,2,3,3,1,1,3,3,0,1,1],[10,2,3,0,2,5,2,2,2,2,1,2,1,1,1],[8,3,2,2,0,2,3,0,2,0,1,0,3,0,1],[10,4,2,5,2,0,2,0,1,0,1,4,0,2,1],[8,3,3,2,3,2,0,1,1,1,0,2,2,0,0],[10,3,3,2,0,0,1,0,2,1,0,1,1,1,3],[7,3,1,2,2,1,1,2,0,1,2,2,2,1,1],[11,6,1,2,0,0,1,1,1,0,0,2,1,2,1],[5,2,3,1,1,1,0,0,2,0,0,1,3,2,0],[4,3,3,2,0,4,2,1,2,2,1,0,0,1,1],[8,1,0,1,3,0,2,1,2,1,3,0,0,1,1],[7,2,1,1,0,2,0,1,1,2,2,1,1,0,2],[6,5,1,1,1,1,0,3,1,1,0,1,1,2,0]],"wilsonLower":[[null,12.7,23.7,31.3,21.5,10.8,21.5,16.8,48.7,15.2,0,15.0,30.6,48.7,9.7],[42.4,null,30.0,0,20.8,30.1,43.8,20.8,6.1,9.7,9.5,6.1,20.7,34.2,0],[23.7,9.7,null,6.1,34.2,34.2,20.8,20.8,0,0,20.8,20.8,null,0,0],[16.8,34.2,20.8,null,9.5,23.1,9.5,34.2,9.5,34.2,20.7,34.2,0,20.7,0],[21.5,6.1,0,9.5,null,0,6.1,null,0,null,0,null,20.8,null,20.7],[39.7,4.6,0,11.8,34.2,null,0,null,0,null,20.7,15.0,null,9.5,20.7],[21.5,0,6.1,9.5,20.8,34.2,null,0,20.7,0,null,0,0,null,null],[31.3,6.1,6.1,0,null,null,20.7,null,0,0,null,0,20.7,0,43.8],[2.6,20.8,20.7,9.5,34.2,20.7,0,34.2,null,0,9.5,34.2,9.5,0,0],[35.4,30.0,20.7,0,null,null,20.7,20.7,20.7,null,null,0,20.7,34.2,20.7],[56.6,9.5,6.1,0,20.7,0,null,null,9.5,null,null,20.7,20.8,9.5,null],[15.0,20.8,6.1,0,null,15.0,34.2,20.7,0,34.2,0,null,null,0,20.7],[13.7,0,null,20.7,6.1,null,34.2,0,9.5,0,6.1,null,null,0,20.7],[2.6,0,20.7,0,null,9.5,null,20.7,20.7,0,9.5,20.7,20.7,null,9.5],[30.0,56.6,20.7,20.7,0,0,null,0,20.7,0,null,0,0,9.5,null]],"wilsonUpper":[[null,57.6,76.3,83.2,78.5,60.3,78.5,68.7,97.4,64.6,43.4,85.0,86.3,97.4,70.0],[87.3,null,90.3,65.8,93.9,95.4,100,93.9,79.2,70.0,90.5,79.2,100,100,43.4],[76.3,70.0,null,79.2,100,100,93.9,93.9,79.3,79.3,93.9,93.9,null,79.3,79.3],[68.7,100,93.9,null,90.5,88.2,90.5,100,90.5,100,100,100,79.3,100,79.3],[78.5,79.2,65.8,90.5,null,65.8,79.2,null,65.8,null,79.3,null,93.9,null,100],[89.2,69.9,65.8,76.9,100,null,65.8,null,79.3,null,100,85.0,null,90.5,100],[78.5,56.2,79.2,90.5,93.9,100,null,79.3,100,79.3,null,65.8,65.8,null,null],[83.2,79.2,79.2,65.8,null,null,100,null,65.8,79.3,null,79.3,100,79.3,100],[51.3,93.9,100,90.5,100,100,79.3,100,null,79.3,90.5,100,90.5,79.3,79.3],[84.8,90.3,100,65.8,null,null,100,100,100,null,null,65.8,100,100,100],[100,90.5,79.2,79.3,100,79.3,null,null,90.5,null,null,100,93.9,90.5,null],[85.0,93.9,79.2,65.8,null,85.0,100,100,65.8,100,79.3,null,null,79.3,100],[69.4,79.3,null,100,79.2,null,100,79.3,90.5,79.3,79.2,null,null,79.3,100],[51.3,65.8,100,79.3,null,90.5,null,100,100,65.8,90.5,100,100,null,90.5],[90.3,100,100,100,79.3,79.3,null,56.2,100,79.3,null,79.3,79.3,90.5,null]],"stats":[{"name":"Dimir Tempo","playerCount":53,"overallWinrate":47.0,"totalMatches":117,"metaShare":25.9,"skillSensitivity":2.6,"weightedWrRaw":46.9,"weightedWrAdj":47.8},{"name":"Izzet Affinity","playerCount":18,"overallWinrate":55.4,"totalMatches":56,"metaShare":8.8,"skillSensitivity":3.6,"weightedWrRaw":59.7,"weightedWrAdj":60.6},{"name":"Sultai Doomsday","playerCount":16,"overallWinrate":51.3,"totalMatches":39,"metaShare":7.8,"skillSensitivity":4.91,"weightedWrRaw":47.9,"weightedWrAdj":48.5},{"name":"Mono-Red Eldrazi","playerCount":14,"overallWinrate":61.1,"totalMatches":36,"metaShare":6.8,"skillSensitivity":5.94,"weightedWrRaw":61.6,"weightedWrAdj":57.5},{"name":"Bant Beanstalk","playerCount":11,"overallWinrate":37.0,"totalMatches":27,"metaShare":5.4,"skillSensitivity":5.9,"weightedWrRaw":35.3,"weightedWrAdj":32.8},{"name":"Izzet Delver","playerCount":12,"overallWinrate":50.0,"totalMatches":34,"metaShare":5.9,"skillSensitivity":7.6,"weightedWrRaw":50.1,"weightedWrAdj":53.4},{"name":"W-U-B-R-G Sneak and Show","playerCount":10,"overallWinrate":39.3,"totalMatches":28,"metaShare":4.9,"skillSensitivity":4.36,"weightedWrRaw":39.9,"weightedWrAdj":41.3},{"name":"W-U-B-G Omni-Tell","playerCount":11,"overallWinrate":46.4,"totalMatches":28,"metaShare":5.4,"skillSensitivity":5.23,"weightedWrRaw":42.7,"weightedWrAdj":44.8},{"name":"U-B-R-G Oops! All Spells","playerCount":10,"overallWinrate":50.0,"totalMatches":28,"metaShare":4.9,"skillSensitivity":6.72,"weightedWrRaw":48.6,"weightedWrAdj":45.5},{"name":"Mono-Green Lands","playerCount":8,"overallWinrate":65.5,"totalMatches":29,"metaShare":3.9,"skillSensitivity":6.75,"weightedWrRaw":70.8,"weightedWrAdj":69.2},{"name":"Azorius Stoneblade","playerCount":9,"overallWinrate":61.9,"totalMatches":21,"metaShare":4.4,"skillSensitivity":5.9,"weightedWrRaw":64.0,"weightedWrAdj":58.6},{"name":"Orzhov Death and Taxes (Yorion)","playerCount":9,"overallWinrate":50.0,"totalMatches":26,"metaShare":4.4,"skillSensitivity":3.99,"weightedWrRaw":48.8,"weightedWrAdj":48.0},{"name":"Dimir","playerCount":9,"overallWinrate":41.7,"totalMatches":24,"metaShare":4.4,"skillSensitivity":6.13,"weightedWrRaw":39.3,"weightedWrAdj":42.0},{"name":"Esper Cephalid Breakfast","playerCount":8,"overallWinrate":39.1,"totalMatches":23,"metaShare":3.9,"skillSensitivity":5.69,"weightedWrRaw":43.6,"weightedWrAdj":44.2},{"name":"W-U-B-G Cradle Control","playerCount":7,"overallWinrate":54.2,"totalMatches":24,"metaShare":3.4,"skillSensitivity":6.54,"weightedWrRaw":54.3,"weightedWrAdj":56.0}],"meta":{"totalPlayers":205,"totalMatches":270,"eloMatchRate":83.0,"classifiedMatches":270,"tournamentCount":65,"dateRange":["2026-01-03","2026-03-15"]}},"tabletop":{"archetypes":["Dimir Tempo","Izzet Affinity","Sultai Doomsday","Mono-Red Eldrazi","Bant Beanstalk","Izzet Delver","W-U-B-R-G Sneak and Show","W-U-B-G Omni-Tell","U-B-R-G Oops! All Spells","Mono-Green Lands","Azorius Stoneblade","Orzhov Death and Taxes (Yorion)","Dimir","Esper Cephalid Breakfast","W-U-B-G Cradle Control"],"rawMatrix":[[null,30.8,50.0,60.0,50.0,30.0,50.0,40.0,85.7,36.4,0.0,50.0,62.5,85.7,33.3],[69.2,null,66.7,0.0,66.7,75.0,100.0,66.7,33.3,33.3,50.0,33.3,100.0,100.0,0.0],[50.0,33.3,null,33.3,100.0,100.0,66.7,66.7,0.0,0.0,66.7,66.7,null,0.0,0.0],[40.0,100.0,66.7,null,50.0,60.0,50.0,100.0,50.0,100.0,100.0,100.0,0.0,100.0,0.0],[50.0,33.3,0.0,50.0,null,0.0,33.3,null,0.0,null,0.0,null,66.7,null,100.0],[70.0,25.0,0.0,40.0,100.0,null,0.0,null,0.0,null,100.0,50.0,null,50.0,100.0],[50.0,0.0,33.3,50.0,66.7,100.0,null,0.0,100.0,0.0,null,0.0,0.0,null,null],[60.0,33.3,33.3,0.0,null,null,100.0,null,0.0,0.0,null,0.0,100.0,0.0,100.0],[14.3,66.7,100.0,50.0,100.0,100.0,0.0,100.0,null,0.0,50.0,100.0,50.0,0.0,0.0],[63.6,66.7,100.0,0.0,null,null,100.0,100.0,100.0,null,null,0.0,100.0,100.0,100.0],[100.0,50.0,33.3,0.0,100.0,0.0,null,null,50.0,null,null,100.0,66.7,50.0,null],[50.0,66.7,33.3,0.0,null,50.0,100.0,100.0,0.0,100.0,0.0,null,null,0.0,100.0],[37.5,0.0,null,100.0,33.3,null,100.0,0.0,50.0,0.0,33.3,null,null,0.0,100.0],[14.3,0.0,100.0,0.0,null,50.0,null,100.0,100.0,0.0,50.0,100.0,100.0,null,50.0],[66.7,100.0,100.0,100.0,0.0,0.0,null,0.0,100.0,0.0,null,0.0,0.0,50.0,null]],"adjustedMatrix":[[null,30.9,52.1,62.0,52.0,30.3,46.2,41.2,86.0,40.1,11.4,48.3,60.3,81.7,34.9],[69.1,null,64.3,9.0,67.0,65.8,100.9,67.4,40.4,35.1,58.2,36.4,100.1,96.6,4.1],[47.9,35.7,null,40.8,102.9,93.7,65.4,55.8,4.3,6.6,69.7,66.0,null,10.9,4.9],[38.0,91.0,59.2,null,58.4,53.0,52.6,90.6,47.2,90.3,91.3,97.6,-4.7,91.3,0.3],[48.0,33.0,-2.9,41.6,null,10.9,22.3,null,-1.7,null,2.2,null,64.5,null,82.6],[69.7,34.2,6.3,47.0,89.1,null,3.4,null,20.3,null,112.9,53.7,null,46.9,93.5],[53.8,-0.9,34.6,47.4,77.7,96.6,null,2.0,99.4,4.6,null,5.9,-11.9,null,null],[58.8,32.6,44.2,9.4,null,null,98.0,null,8.5,4.9,null,9.8,95.8,0.3,94.4],[14.0,59.6,95.7,52.8,101.7,79.7,0.6,91.5,null,-7.5,50.9,93.6,56.5,8.9,-18.3],[59.9,64.9,93.4,9.7,null,null,95.4,95.1,107.5,null,null,10.6,89.0,91.2,105.1],[88.6,41.8,30.3,8.7,97.8,-12.9,null,null,49.1,null,null,101.2,61.9,55.7,null],[51.7,63.6,34.0,2.4,null,46.3,94.1,90.2,6.4,89.4,-1.2,null,null,2.2,99.8],[39.7,-0.1,null,104.7,35.5,null,111.9,4.2,43.5,11.0,38.1,null,null,8.8,89.0],[18.3,3.4,89.1,8.7,null,53.1,null,99.7,91.1,8.8,44.3,97.8,91.2,null,53.5],[65.1,95.9,95.1,99.7,17.4,6.5,null,5.6,118.3,-5.1,null,0.2,11.0,46.5,null]],"deltaMatrix":[[null,0.1,2.1,2.0,2.0,0.3,-3.8,1.2,0.3,3.7,11.4,-1.7,-2.2,-4.0,1.6],[-0.1,null,-2.4,9.0,0.3,-9.2,0.9,0.7,7.1,1.8,8.2,3.1,0.1,-3.4,4.1],[-2.1,2.4,null,7.5,2.9,-6.3,-1.3,-10.9,4.3,6.6,3.0,-0.7,null,10.9,4.9],[-2.0,-9.0,-7.5,null,8.4,-7.0,2.6,-9.4,-2.8,-9.7,-8.7,-2.4,-4.7,-8.7,0.3],[-2.0,-0.3,-2.9,-8.4,null,10.9,-11.0,null,-1.7,null,2.2,null,-2.2,null,-17.4],[-0.3,9.2,6.3,7.0,-10.9,null,3.4,null,20.3,null,12.9,3.7,null,-3.1,-6.5],[3.8,-0.9,1.3,-2.6,11.0,-3.4,null,2.0,-0.6,4.6,null,5.9,-11.9,null,null],[-1.2,-0.7,10.9,9.4,null,null,-2.0,null,8.5,4.9,null,9.8,-4.2,0.3,-5.6],[-0.3,-7.1,-4.3,2.8,1.7,-20.3,0.6,-8.5,null,-7.5,0.9,-6.4,6.5,8.9,-18.3],[-3.7,-1.8,-6.6,9.7,null,null,-4.6,-4.9,7.5,null,null,10.6,-11.0,-8.8,5.1],[-11.4,-8.2,-3.0,8.7,-2.2,-12.9,null,null,-0.9,null,null,1.2,-4.8,5.7,null],[1.7,-3.1,0.7,2.4,null,-3.7,-5.9,-9.8,6.4,-10.6,-1.2,null,null,2.2,-0.2],[2.2,-0.1,null,4.7,2.2,null,11.9,4.2,-6.5,11.0,4.8,null,null,8.8,-11.0],[4.0,3.4,-10.9,8.7,null,3.1,null,-0.3,-8.9,8.8,-5.7,-2.2,-8.8,null,3.5],[-1.6,-4.1,-4.9,-0.3,17.4,6.5,null,5.6,18.3,-5.1,null,0.2,11.0,-3.5,null]],"sampleSizes":[[0,13,10,10,8,10,8,10,7,11,5,4,8,7,6],[13,0,6,2,3,4,3,3,3,6,2,3,1,2,5],[10,6,0,3,2,2,3,3,1,1,3,3,0,1,1],[10,2,3,0,2,5,2,2,2,2,1,2,1,1,1],[8,3,2,2,0,2,3,0,2,0,1,0,3,0,1],[10,4,2,5,2,0,2,0,1,0,1,4,0,2,1],[8,3,3,2,3,2,0,1,1,1,0,2,2,0,0],[10,3,3,2,0,0,1,0,2,1,0,1,1,1,3],[7,3,1,2,2,1,1,2,0,1,2,2,2,1,1],[11,6,1,2,0,0,1,1,1,0,0,2,1,2,1],[5,2,3,1,1,1,0,0,2,0,0,1,3,2,0],[4,3,3,2,0,4,2,1,2,2,1,0,0,1,1],[8,1,0,1,3,0,2,1,2,1,3,0,0,1,1],[7,2,1,1,0,2,0,1,1,2,2,1,1,0,2],[6,5,1,1,1,1,0,3,1,1,0,1,1,2,0]],"wilsonLower":[[null,12.7,23.7,31.3,21.5,10.8,21.5,16.8,48.7,15.2,0,15.0,30.6,48.7,9.7],[42.4,null,30.0,0,20.8,30.1,43.8,20.8,6.1,9.7,9.5,6.1,20.7,34.2,0],[23.7,9.7,null,6.1,34.2,34.2,20.8,20.8,0,0,20.8,20.8,null,0,0],[16.8,34.2,20.8,null,9.5,23.1,9.5,34.2,9.5,34.2,20.7,34.2,0,20.7,0],[21.5,6.1,0,9.5,null,0,6.1,null,0,null,0,null,20.8,null,20.7],[39.7,4.6,0,11.8,34.2,null,0,null,0,null,20.7,15.0,null,9.5,20.7],[21.5,0,6.1,9.5,20.8,34.2,null,0,20.7,0,null,0,0,null,null],[31.3,6.1,6.1,0,null,null,20.7,null,0,0,null,0,20.7,0,43.8],[2.6,20.8,20.7,9.5,34.2,20.7,0,34.2,null,0,9.5,34.2,9.5,0,0],[35.4,30.0,20.7,0,null,null,20.7,20.7,20.7,null,null,0,20.7,34.2,20.7],[56.6,9.5,6.1,0,20.7,0,null,null,9.5,null,null,20.7,20.8,9.5,null],[15.0,20.8,6.1,0,null,15.0,34.2,20.7,0,34.2,0,null,null,0,20.7],[13.7,0,null,20.7,6.1,null,34.2,0,9.5,0,6.1,null,null,0,20.7],[2.6,0,20.7,0,null,9.5,null,20.7,20.7,0,9.5,20.7,20.7,null,9.5],[30.0,56.6,20.7,20.7,0,0,null,0,20.7,0,null,0,0,9.5,null]],"wilsonUpper":[[null,57.6,76.3,83.2,78.5,60.3,78.5,68.7,97.4,64.6,43.4,85.0,86.3,97.4,70.0],[87.3,null,90.3,65.8,93.9,95.4,100,93.9,79.2,70.0,90.5,79.2,100,100,43.4],[76.3,70.0,null,79.2,100,100,93.9,93.9,79.3,79.3,93.9,93.9,null,79.3,79.3],[68.7,100,93.9,null,90.5,88.2,90.5,100,90.5,100,100,100,79.3,100,79.3],[78.5,79.2,65.8,90.5,null,65.8,79.2,null,65.8,null,79.3,null,93.9,null,100],[89.2,69.9,65.8,76.9,100,null,65.8,null,79.3,null,100,85.0,null,90.5,100],[78.5,56.2,79.2,90.5,93.9,100,null,79.3,100,79.3,null,65.8,65.8,null,null],[83.2,79.2,79.2,65.8,null,null,100,null,65.8,79.3,null,79.3,100,79.3,100],[51.3,93.9,100,90.5,100,100,79.3,100,null,79.3,90.5,100,90.5,79.3,79.3],[84.8,90.3,100,65.8,null,null,100,100,100,null,null,65.8,100,100,100],[100,90.5,79.2,79.3,100,79.3,null,null,90.5,null,null,100,93.9,90.5,null],[85.0,93.9,79.2,65.8,null,85.0,100,100,65.8,100,79.3,null,null,79.3,100],[69.4,79.3,null,100,79.2,null,100,79.3,90.5,79.3,79.2,null,null,79.3,100],[51.3,65.8,100,79.3,null,90.5,null,100,100,65.8,90.5,100,100,null,90.5],[90.3,100,100,100,79.3,79.3,null,56.2,100,79.3,null,79.3,79.3,90.5,null]],"stats":[{"name":"Dimir Tempo","playerCount":53,"overallWinrate":47.0,"totalMatches":117,"metaShare":25.9,"skillSensitivity":2.6,"weightedWrRaw":46.9,"weightedWrAdj":47.8},{"name":"Izzet Affinity","playerCount":18,"overallWinrate":55.4,"totalMatches":56,"metaShare":8.8,"skillSensitivity":3.6,"weightedWrRaw":59.7,"weightedWrAdj":60.6},{"name":"Sultai Doomsday","playerCount":16,"overallWinrate":51.3,"totalMatches":39,"metaShare":7.8,"skillSensitivity":4.91,"weightedWrRaw":47.9,"weightedWrAdj":48.5},{"name":"Mono-Red Eldrazi","playerCount":14,"overallWinrate":61.1,"totalMatches":36,"metaShare":6.8,"skillSensitivity":5.94,"weightedWrRaw":61.6,"weightedWrAdj":57.5},{"name":"Bant Beanstalk","playerCount":11,"overallWinrate":37.0,"totalMatches":27,"metaShare":5.4,"skillSensitivity":5.9,"weightedWrRaw":35.3,"weightedWrAdj":32.8},{"name":"Izzet Delver","playerCount":12,"overallWinrate":50.0,"totalMatches":34,"metaShare":5.9,"skillSensitivity":7.6,"weightedWrRaw":50.1,"weightedWrAdj":53.4},{"name":"W-U-B-R-G Sneak and Show","playerCount":10,"overallWinrate":39.3,"totalMatches":28,"metaShare":4.9,"skillSensitivity":4.36,"weightedWrRaw":39.9,"weightedWrAdj":41.3},{"name":"W-U-B-G Omni-Tell","playerCount":11,"overallWinrate":46.4,"totalMatches":28,"metaShare":5.4,"skillSensitivity":5.23,"weightedWrRaw":42.7,"weightedWrAdj":44.8},{"name":"U-B-R-G Oops! All Spells","playerCount":10,"overallWinrate":50.0,"totalMatches":28,"metaShare":4.9,"skillSensitivity":6.72,"weightedWrRaw":48.6,"weightedWrAdj":45.5},{"name":"Mono-Green Lands","playerCount":8,"overallWinrate":65.5,"totalMatches":29,"metaShare":3.9,"skillSensitivity":6.75,"weightedWrRaw":70.8,"weightedWrAdj":69.2},{"name":"Azorius Stoneblade","playerCount":9,"overallWinrate":61.9,"totalMatches":21,"metaShare":4.4,"skillSensitivity":5.9,"weightedWrRaw":64.0,"weightedWrAdj":58.6},{"name":"Orzhov Death and Taxes (Yorion)","playerCount":9,"overallWinrate":50.0,"totalMatches":26,"metaShare":4.4,"skillSensitivity":3.99,"weightedWrRaw":48.8,"weightedWrAdj":48.0},{"name":"Dimir","playerCount":9,"overallWinrate":41.7,"totalMatches":24,"metaShare":4.4,"skillSensitivity":6.13,"weightedWrRaw":39.3,"weightedWrAdj":42.0},{"name":"Esper Cephalid Breakfast","playerCount":8,"overallWinrate":39.1,"totalMatches":23,"metaShare":3.9,"skillSensitivity":5.69,"weightedWrRaw":43.6,"weightedWrAdj":44.2},{"name":"W-U-B-G Cradle Control","playerCount":7,"overallWinrate":54.2,"totalMatches":24,"metaShare":3.4,"skillSensitivity":6.54,"weightedWrRaw":54.3,"weightedWrAdj":56.0}],"meta":{"totalPlayers":205,"totalMatches":270,"eloMatchRate":83.0,"classifiedMatches":270,"tournamentCount":9}}},{"format":"Pauper","all":{"archetypes":["Mono-Red Burn","Mono-Blue Blue Terror","Mono-Green Elves","Jund Wildfire","Mono-Red Aggro","Mono-Red Madness Burn","Grixis Affinity","Azorius Caw-Gates","Mono-White Aggro","Mono-Blue Faeries","Gruul","Azorius Familiars","Selesnya Bogles","Rakdos Madness Burn","Golgari Gardens"],"rawMatrix":[[null,28.6,75.0,54.5,72.7,61.5,71.4,20.0,50.0,66.7,50.0,0.0,16.7,20.0,33.3],[71.4,null,30.8,50.0,80.0,63.6,66.7,50.0,44.4,25.0,25.0,50.0,100.0,25.0,0.0],[25.0,69.2,null,77.8,30.0,16.7,100.0,66.7,80.0,66.7,25.0,66.7,100.0,100.0,33.3],[45.5,50.0,22.2,null,83.3,50.0,60.0,66.7,42.9,40.0,66.7,50.0,100.0,50.0,100.0],[27.3,20.0,70.0,16.7,null,57.1,28.6,20.0,33.3,33.3,50.0,0.0,50.0,66.7,75.0],[38.5,36.4,83.3,50.0,42.9,null,77.8,40.0,0.0,42.9,40.0,50.0,25.0,60.0,0.0],[28.6,33.3,0.0,40.0,71.4,22.2,null,28.6,null,50.0,50.0,100.0,null,100.0,100.0],[80.0,50.0,33.3,33.3,80.0,60.0,71.4,null,50.0,33.3,25.0,null,100.0,0.0,75.0],[50.0,55.6,20.0,57.1,66.7,100.0,null,50.0,null,0.0,100.0,33.3,100.0,null,0.0],[33.3,75.0,33.3,60.0,66.7,57.1,50.0,66.7,100.0,null,0.0,null,100.0,50.0,null],[50.0,75.0,75.0,33.3,50.0,60.0,50.0,75.0,0.0,100.0,null,100.0,null,null,null],[100.0,50.0,33.3,50.0,100.0,50.0,0.0,null,66.7,null,0.0,null,100.0,33.3,null],[83.3,0.0,0.0,0.0,50.0,75.0,null,0.0,0.0,0.0,null,0.0,null,null,null],[80.0,75.0,0.0,50.0,33.3,40.0,0.0,100.0,null,50.0,null,66.7,null,null,0.0],[66.7,100.0,66.7,0.0,25.0,100.0,0.0,25.0,100.0,null,null,null,null,100.0,null]],"adjustedMatrix":[[null,35.5,75.9,55.3,72.7,61.4,68.3,25.0,54.8,67.1,53.4,3.6,19.5,26.5,39.1],[64.5,null,32.8,53.8,80.4,64.3,64.4,46.3,39.6,28.0,24.7,53.2,87.0,26.2,-0.9],[24.1,67.2,null,76.6,29.3,17.7,95.0,57.6,77.6,70.3,25.5,72.6,96.2,97.1,22.4],[44.7,46.2,23.4,null,79.7,51.4,59.1,66.9,45.9,38.7,60.8,48.4,85.3,48.6,94.0],[27.3,19.6,70.7,20.3,null,58.5,32.4,19.0,36.1,32.9,51.4,4.5,50.2,65.3,76.5],[38.6,35.7,82.3,48.6,41.5,null,79.7,46.6,5.4,46.7,43.2,48.2,21.9,53.7,4.6],[31.7,35.6,5.0,40.9,67.6,20.3,null,32.1,null,48.2,53.8,91.5,null,86.4,99.4],[75.0,53.7,42.4,33.1,81.0,53.4,67.9,null,46.7,34.0,31.2,null,95.7,8.5,74.8],[45.2,60.4,22.4,54.1,63.9,94.6,null,53.3,null,13.3,99.6,32.6,92.3,null,11.7],[32.9,72.0,29.7,61.3,67.1,53.3,51.8,66.0,86.7,null,7.4,null,89.4,46.2,null],[46.6,75.3,74.5,39.2,48.6,56.8,46.2,68.8,0.4,92.6,null,93.5,null,null,null],[96.4,46.8,27.4,51.6,95.5,51.8,8.5,null,67.4,null,6.5,null,98.4,34.4,null],[80.5,13.0,3.8,14.7,49.8,78.1,null,4.3,7.7,10.6,null,1.6,null,null,null],[73.5,73.8,2.9,51.4,34.7,46.3,13.6,91.5,null,53.8,null,65.6,null,null,8.9],[60.9,100.9,77.6,6.0,23.5,95.4,0.6,25.2,88.3,null,null,null,null,91.1,null]],"deltaMatrix":[[null,6.9,0.9,0.8,0.0,-0.1,-3.1,5.0,4.8,0.4,3.4,3.6,2.8,6.5,5.8],[-6.9,null,2.0,3.8,0.4,0.7,-2.3,-3.7,-4.8,3.0,-0.3,3.2,-13.0,1.2,-0.9],[-0.9,-2.0,null,-1.2,-0.7,1.0,-5.0,-9.1,-2.4,3.6,0.5,5.9,-3.8,-2.9,-10.9],[-0.8,-3.8,1.2,null,-3.6,1.4,-0.9,0.2,3.0,-1.3,-5.9,-1.6,-14.7,-1.4,-6.0],[0.0,-0.4,0.7,3.6,null,1.4,3.8,-1.0,2.8,-0.4,1.4,4.5,0.2,-1.4,1.5],[0.1,-0.7,-1.0,-1.4,-1.4,null,1.9,6.6,5.4,3.8,3.2,-1.8,-3.1,-6.3,4.6],[3.1,2.3,5.0,0.9,-3.8,-1.9,null,3.5,null,-1.8,3.8,-8.5,null,-13.6,-0.6],[-5.0,3.7,9.1,-0.2,1.0,-6.6,-3.5,null,-3.3,0.7,6.2,null,-4.3,8.5,-0.2],[-4.8,4.8,2.4,-3.0,-2.8,-5.4,null,3.3,null,13.3,-0.4,-0.7,-7.7,null,11.7],[-0.4,-3.0,-3.6,1.3,0.4,-3.8,1.8,-0.7,-13.3,null,7.4,null,-10.6,-3.8,null],[-3.4,0.3,-0.5,5.9,-1.4,-3.2,-3.8,-6.2,0.4,-7.4,null,-6.5,null,null,null],[-3.6,-3.2,-5.9,1.6,-4.5,1.8,8.5,null,0.7,null,6.5,null,-1.6,1.1,null],[-2.8,13.0,3.8,14.7,-0.2,3.1,null,4.3,7.7,10.6,null,1.6,null,null,null],[-6.5,-1.2,2.9,1.4,1.4,6.3,13.6,-8.5,null,3.8,null,-1.1,null,null,8.9],[-5.8,0.9,10.9,6.0,-1.5,-4.6,0.6,0.2,-11.7,null,null,null,null,-8.9,null]],"sampleSizes":[[0,14,4,11,11,13,7,5,4,6,4,3,6,5,6],[14,0,13,6,10,11,6,4,9,8,4,4,2,4,3],[4,13,0,9,10,12,3,3,5,9,4,3,2,6,3],[11,6,9,0,6,6,5,3,7,5,3,8,2,2,3],[11,10,10,6,0,7,7,5,3,3,2,1,2,3,4],[13,11,12,6,7,0,9,5,1,7,5,2,4,5,1],[7,6,3,5,7,9,0,7,0,4,2,1,0,1,1],[5,4,3,3,5,5,7,0,4,3,4,0,3,1,4],[4,9,5,7,3,1,0,4,0,1,1,3,2,0,3],[6,8,9,5,3,7,4,3,1,0,2,0,1,2,0],[4,4,4,3,2,5,2,4,1,2,0,1,0,0,0],[3,4,3,8,1,2,1,0,3,0,1,0,1,3,0],[6,2,2,2,2,4,0,3,2,1,0,1,0,0,0],[5,4,6,2,3,5,1,1,0,2,0,3,0,0,1],[6,3,3,3,4,1,1,4,3,0,0,0,0,1,0]],"wilsonLower":[[null,11.7,30.1,28.0,43.4,35.5,35.9,3.6,15.0,30.0,15.0,0,3.0,3.6,9.7],[45.4,null,12.7,18.8,49.0,35.4,30.0,15.0,18.9,7.1,4.6,15.0,34.2,4.6,0],[4.6,42.4,null,45.3,10.8,4.7,43.8,20.8,37.6,35.4,4.6,20.8,34.2,61.0,6.1],[21.3,18.8,6.3,null,43.6,18.8,23.1,20.8,15.8,11.8,20.8,21.5,34.2,9.5,43.8],[9.7,5.7,39.7,3.0,null,25.0,8.2,3.6,6.1,6.1,9.5,0,9.5,20.8,30.1],[17.7,15.2,55.2,18.8,15.8,null,45.3,11.8,0,15.8,11.8,9.5,4.6,23.1,0],[8.2,9.7,0,11.8,35.9,6.3,null,8.2,null,15.0,9.5,20.7,null,20.7,20.7],[37.6,15.0,6.1,6.1,37.6,23.1,35.9,null,15.0,6.1,4.6,null,43.8,0,30.1],[15.0,26.7,3.6,25.0,20.8,20.7,null,15.0,null,0,20.7,6.1,34.2,null,0],[9.7,40.9,12.1,23.1,20.8,25.0,15.0,20.8,20.7,null,0,null,20.7,9.5,null],[15.0,30.1,30.1,6.1,9.5,23.1,9.5,30.1,0,34.2,null,20.7,null,null,null],[43.8,15.0,6.1,21.5,20.7,9.5,0,null,20.8,null,0,null,20.7,6.1,null],[43.6,0,0,0,9.5,30.1,null,0,0,0,null,0,null,null,null],[37.6,30.1,0,9.5,6.1,11.8,0,20.7,null,9.5,null,20.8,null,null,0],[30.0,43.8,20.8,0,4.6,20.7,0,4.6,43.8,null,null,null,null,20.7,null]],"wilsonUpper":[[null,54.6,95.4,78.7,90.3,82.3,91.8,62.4,85.0,90.3,85.0,56.2,56.4,62.4,70.0],[88.3,null,57.6,81.2,94.3,84.8,90.3,85.0,73.3,59.1,69.9,85.0,100,69.9,56.2],[69.9,87.3,null,93.7,60.3,44.8,100,93.9,96.4,87.9,69.9,93.9,100,100.0,79.2],[72.0,81.2,54.7,null,97.0,81.2,88.2,93.9,75.0,76.9,93.9,78.5,100,90.5,100],[56.6,51.0,89.2,56.4,null,84.2,64.1,62.4,79.2,79.2,90.5,79.3,90.5,93.9,95.4],[64.5,64.6,95.3,81.2,75.0,null,93.7,76.9,79.3,75.0,76.9,90.5,69.9,88.2,79.3],[64.1,70.0,56.2,76.9,91.8,54.7,null,64.1,null,85.0,90.5,100,null,100,100],[96.4,85.0,79.2,79.2,96.4,88.2,91.8,null,85.0,79.2,69.9,null,100,79.3,95.4],[85.0,81.1,62.4,84.2,93.9,100,null,85.0,null,79.3,100,79.2,100,null,56.2],[70.0,92.9,64.6,88.2,93.9,84.2,85.0,93.9,100,null,65.8,null,100,90.5,null],[85.0,95.4,95.4,79.2,90.5,88.2,90.5,95.4,79.3,100,null,100,null,null,null],[100,85.0,79.2,78.5,100,90.5,79.3,null,93.9,null,79.3,null,100,79.2,null],[97.0,65.8,65.8,65.8,90.5,95.4,null,56.2,65.8,79.3,null,79.3,null,null,null],[96.4,95.4,39.0,90.5,79.2,76.9,79.3,100,null,90.5,null,93.9,null,null,79.3],[90.3,100,93.9,56.2,69.9,100,79.3,69.9,100,null,null,null,null,100,null]],"stats":[{"name":"Mono-Red Burn","playerCount":27,"overallWinrate":47.5,"totalMatches":99,"metaShare":11.0,"skillSensitivity":3.15,"weightedWrRaw":50.1,"weightedWrAdj":52.2},{"name":"Mono-Blue Blue Terror","playerCount":26,"overallWinrate":51.0,"totalMatches":98,"metaShare":10.6,"skillSensitivity":3.3,"weightedWrRaw":52.5,"weightedWrAdj":51.7},{"name":"Mono-Green Elves","playerCount":26,"overallWinrate":57.0,"totalMatches":86,"metaShare":10.6,"skillSensitivity":3.56,"weightedWrRaw":57.4,"weightedWrAdj":55.8},{"name":"Jund Wildfire","playerCount":24,"overallWinrate":52.6,"totalMatches":76,"metaShare":9.8,"skillSensitivity":3.27,"weightedWrRaw":54.8,"weightedWrAdj":53.1},{"name":"Mono-Red Aggro","playerCount":24,"overallWinrate":39.2,"totalMatches":74,"metaShare":9.8,"skillSensitivity":1.65,"weightedWrRaw":37.2,"weightedWrAdj":38.5},{"name":"Mono-Red Madness Burn","playerCount":21,"overallWinrate":50.0,"totalMatches":88,"metaShare":8.5,"skillSensitivity":2.95,"weightedWrRaw":46.1,"weightedWrAdj":46.4},{"name":"Grixis Affinity","playerCount":18,"overallWinrate":39.6,"totalMatches":53,"metaShare":7.3,"skillSensitivity":4.07,"weightedWrRaw":43.1,"weightedWrAdj":43.0},{"name":"Azorius Caw-Gates","playerCount":11,"overallWinrate":58.8,"totalMatches":51,"metaShare":4.5,"skillSensitivity":4.02,"weightedWrRaw":54.5,"weightedWrAdj":54.9},{"name":"Mono-White Aggro","playerCount":12,"overallWinrate":48.8,"totalMatches":43,"metaShare":4.9,"skillSensitivity":5.02,"weightedWrRaw":53.1,"weightedWrAdj":53.2},{"name":"Mono-Blue Faeries","playerCount":12,"overallWinrate":52.9,"totalMatches":51,"metaShare":4.9,"skillSensitivity":4.17,"weightedWrRaw":56.0,"weightedWrAdj":54.1},{"name":"Gruul","playerCount":9,"overallWinrate":62.5,"totalMatches":32,"metaShare":3.7,"skillSensitivity":3.55,"weightedWrRaw":59.1,"weightedWrAdj":57.5},{"name":"Azorius Familiars","playerCount":11,"overallWinrate":53.3,"totalMatches":30,"metaShare":4.5,"skillSensitivity":3.55,"weightedWrRaw":56.0,"weightedWrAdj":55.3},{"name":"Selesnya Bogles","playerCount":8,"overallWinrate":36.0,"totalMatches":25,"metaShare":3.3,"skillSensitivity":6.18,"weightedWrRaw":25.8,"weightedWrAdj":31.3},{"name":"Rakdos Madness Burn","playerCount":9,"overallWinrate":45.5,"totalMatches":33,"metaShare":3.7,"skillSensitivity":5.05,"weightedWrRaw":45.1,"weightedWrAdj":46.7},{"name":"Golgari Gardens","playerCount":8,"overallWinrate":55.2,"totalMatches":29,"metaShare":3.3,"skillSensitivity":5.11,"weightedWrRaw":56.6,"weightedWrAdj":56.4}],"meta":{"totalPlayers":246,"totalMatches":434,"eloMatchRate":81.8,"classifiedMatches":434,"tournamentCount":51,"dateRange":["2026-01-01","2026-03-15"]}},"tabletop":{"archetypes":["Mono-Red Burn","Mono-Blue Blue Terror","Mono-Green Elves","Jund Wildfire","Mono-Red Aggro","Mono-Red Madness Burn","Grixis Affinity","Azorius Caw-Gates","Mono-White Aggro","Mono-Blue Faeries","Gruul","Azorius Familiars","Selesnya Bogles","Rakdos Madness Burn","Golgari Gardens"],"rawMatrix":[[null,28.6,75.0,54.5,72.7,61.5,71.4,20.0,50.0,66.7,50.0,0.0,16.7,20.0,33.3],[71.4,null,30.8,50.0,80.0,63.6,66.7,50.0,44.4,25.0,25.0,50.0,100.0,25.0,0.0],[25.0,69.2,null,77.8,30.0,16.7,100.0,66.7,80.0,66.7,25.0,66.7,100.0,100.0,33.3],[45.5,50.0,22.2,null,83.3,50.0,60.0,66.7,42.9,40.0,66.7,50.0,100.0,50.0,100.0],[27.3,20.0,70.0,16.7,null,57.1,28.6,20.0,33.3,33.3,50.0,0.0,50.0,66.7,75.0],[38.5,36.4,83.3,50.0,42.9,null,77.8,40.0,0.0,42.9,40.0,50.0,25.0,60.0,0.0],[28.6,33.3,0.0,40.0,71.4,22.2,null,28.6,null,50.0,50.0,100.0,null,100.0,100.0],[80.0,50.0,33.3,33.3,80.0,60.0,71.4,null,50.0,33.3,25.0,null,100.0,0.0,75.0],[50.0,55.6,20.0,57.1,66.7,100.0,null,50.0,null,0.0,100.0,33.3,100.0,null,0.0],[33.3,75.0,33.3,60.0,66.7,57.1,50.0,66.7,100.0,null,0.0,null,100.0,50.0,null],[50.0,75.0,75.0,33.3,50.0,60.0,50.0,75.0,0.0,100.0,null,100.0,null,null,null],[100.0,50.0,33.3,50.0,100.0,50.0,0.0,null,66.7,null,0.0,null,100.0,33.3,null],[83.3,0.0,0.0,0.0,50.0,75.0,null,0.0,0.0,0.0,null,0.0,null,null,null],[80.0,75.0,0.0,50.0,33.3,40.0,0.0,100.0,null,50.0,null,66.7,null,null,0.0],[66.7,100.0,66.7,0.0,25.0,100.0,0.0,25.0,100.0,null,null,null,null,100.0,null]],"adjustedMatrix":[[null,35.5,75.9,55.3,72.7,61.4,68.3,25.0,54.8,67.1,53.4,3.6,19.5,26.5,39.1],[64.5,null,32.8,53.8,80.4,64.3,64.4,46.3,39.6,28.0,24.7,53.2,87.0,26.2,-0.9],[24.1,67.2,null,76.6,29.3,17.7,95.0,57.6,77.6,70.3,25.5,72.6,96.2,97.1,22.4],[44.7,46.2,23.4,null,79.7,51.4,59.1,66.9,45.9,38.7,60.8,48.4,85.3,48.6,94.0],[27.3,19.6,70.7,20.3,null,58.5,32.4,19.0,36.1,32.9,51.4,4.5,50.2,65.3,76.5],[38.6,35.7,82.3,48.6,41.5,null,79.7,46.6,5.4,46.7,43.2,48.2,21.9,53.7,4.6],[31.7,35.6,5.0,40.9,67.6,20.3,null,32.1,null,48.2,53.8,91.5,null,86.4,99.4],[75.0,53.7,42.4,33.1,81.0,53.4,67.9,null,46.7,34.0,31.2,null,95.7,8.5,74.8],[45.2,60.4,22.4,54.1,63.9,94.6,null,53.3,null,13.3,99.6,32.6,92.3,null,11.7],[32.9,72.0,29.7,61.3,67.1,53.3,51.8,66.0,86.7,null,7.4,null,89.4,46.2,null],[46.6,75.3,74.5,39.2,48.6,56.8,46.2,68.8,0.4,92.6,null,93.5,null,null,null],[96.4,46.8,27.4,51.6,95.5,51.8,8.5,null,67.4,null,6.5,null,98.4,34.4,null],[80.5,13.0,3.8,14.7,49.8,78.1,null,4.3,7.7,10.6,null,1.6,null,null,null],[73.5,73.8,2.9,51.4,34.7,46.3,13.6,91.5,null,53.8,null,65.6,null,null,8.9],[60.9,100.9,77.6,6.0,23.5,95.4,0.6,25.2,88.3,null,null,null,null,91.1,null]],"deltaMatrix":[[null,6.9,0.9,0.8,0.0,-0.1,-3.1,5.0,4.8,0.4,3.4,3.6,2.8,6.5,5.8],[-6.9,null,2.0,3.8,0.4,0.7,-2.3,-3.7,-4.8,3.0,-0.3,3.2,-13.0,1.2,-0.9],[-0.9,-2.0,null,-1.2,-0.7,1.0,-5.0,-9.1,-2.4,3.6,0.5,5.9,-3.8,-2.9,-10.9],[-0.8,-3.8,1.2,null,-3.6,1.4,-0.9,0.2,3.0,-1.3,-5.9,-1.6,-14.7,-1.4,-6.0],[0.0,-0.4,0.7,3.6,null,1.4,3.8,-1.0,2.8,-0.4,1.4,4.5,0.2,-1.4,1.5],[0.1,-0.7,-1.0,-1.4,-1.4,null,1.9,6.6,5.4,3.8,3.2,-1.8,-3.1,-6.3,4.6],[3.1,2.3,5.0,0.9,-3.8,-1.9,null,3.5,null,-1.8,3.8,-8.5,null,-13.6,-0.6],[-5.0,3.7,9.1,-0.2,1.0,-6.6,-3.5,null,-3.3,0.7,6.2,null,-4.3,8.5,-0.2],[-4.8,4.8,2.4,-3.0,-2.8,-5.4,null,3.3,null,13.3,-0.4,-0.7,-7.7,null,11.7],[-0.4,-3.0,-3.6,1.3,0.4,-3.8,1.8,-0.7,-13.3,null,7.4,null,-10.6,-3.8,null],[-3.4,0.3,-0.5,5.9,-1.4,-3.2,-3.8,-6.2,0.4,-7.4,null,-6.5,null,null,null],[-3.6,-3.2,-5.9,1.6,-4.5,1.8,8.5,null,0.7,null,6.5,null,-1.6,1.1,null],[-2.8,13.0,3.8,14.7,-0.2,3.1,null,4.3,7.7,10.6,null,1.6,null,null,null],[-6.5,-1.2,2.9,1.4,1.4,6.3,13.6,-8.5,null,3.8,null,-1.1,null,null,8.9],[-5.8,0.9,10.9,6.0,-1.5,-4.6,0.6,0.2,-11.7,null,null,null,null,-8.9,null]],"sampleSizes":[[0,14,4,11,11,13,7,5,4,6,4,3,6,5,6],[14,0,13,6,10,11,6,4,9,8,4,4,2,4,3],[4,13,0,9,10,12,3,3,5,9,4,3,2,6,3],[11,6,9,0,6,6,5,3,7,5,3,8,2,2,3],[11,10,10,6,0,7,7,5,3,3,2,1,2,3,4],[13,11,12,6,7,0,9,5,1,7,5,2,4,5,1],[7,6,3,5,7,9,0,7,0,4,2,1,0,1,1],[5,4,3,3,5,5,7,0,4,3,4,0,3,1,4],[4,9,5,7,3,1,0,4,0,1,1,3,2,0,3],[6,8,9,5,3,7,4,3,1,0,2,0,1,2,0],[4,4,4,3,2,5,2,4,1,2,0,1,0,0,0],[3,4,3,8,1,2,1,0,3,0,1,0,1,3,0],[6,2,2,2,2,4,0,3,2,1,0,1,0,0,0],[5,4,6,2,3,5,1,1,0,2,0,3,0,0,1],[6,3,3,3,4,1,1,4,3,0,0,0,0,1,0]],"wilsonLower":[[null,11.7,30.1,28.0,43.4,35.5,35.9,3.6,15.0,30.0,15.0,0,3.0,3.6,9.7],[45.4,null,12.7,18.8,49.0,35.4,30.0,15.0,18.9,7.1,4.6,15.0,34.2,4.6,0],[4.6,42.4,null,45.3,10.8,4.7,43.8,20.8,37.6,35.4,4.6,20.8,34.2,61.0,6.1],[21.3,18.8,6.3,null,43.6,18.8,23.1,20.8,15.8,11.8,20.8,21.5,34.2,9.5,43.8],[9.7,5.7,39.7,3.0,null,25.0,8.2,3.6,6.1,6.1,9.5,0,9.5,20.8,30.1],[17.7,15.2,55.2,18.8,15.8,null,45.3,11.8,0,15.8,11.8,9.5,4.6,23.1,0],[8.2,9.7,0,11.8,35.9,6.3,null,8.2,null,15.0,9.5,20.7,null,20.7,20.7],[37.6,15.0,6.1,6.1,37.6,23.1,35.9,null,15.0,6.1,4.6,null,43.8,0,30.1],[15.0,26.7,3.6,25.0,20.8,20.7,null,15.0,null,0,20.7,6.1,34.2,null,0],[9.7,40.9,12.1,23.1,20.8,25.0,15.0,20.8,20.7,null,0,null,20.7,9.5,null],[15.0,30.1,30.1,6.1,9.5,23.1,9.5,30.1,0,34.2,null,20.7,null,null,null],[43.8,15.0,6.1,21.5,20.7,9.5,0,null,20.8,null,0,null,20.7,6.1,null],[43.6,0,0,0,9.5,30.1,null,0,0,0,null,0,null,null,null],[37.6,30.1,0,9.5,6.1,11.8,0,20.7,null,9.5,null,20.8,null,null,0],[30.0,43.8,20.8,0,4.6,20.7,0,4.6,43.8,null,null,null,null,20.7,null]],"wilsonUpper":[[null,54.6,95.4,78.7,90.3,82.3,91.8,62.4,85.0,90.3,85.0,56.2,56.4,62.4,70.0],[88.3,null,57.6,81.2,94.3,84.8,90.3,85.0,73.3,59.1,69.9,85.0,100,69.9,56.2],[69.9,87.3,null,93.7,60.3,44.8,100,93.9,96.4,87.9,69.9,93.9,100,100.0,79.2],[72.0,81.2,54.7,null,97.0,81.2,88.2,93.9,75.0,76.9,93.9,78.5,100,90.5,100],[56.6,51.0,89.2,56.4,null,84.2,64.1,62.4,79.2,79.2,90.5,79.3,90.5,93.9,95.4],[64.5,64.6,95.3,81.2,75.0,null,93.7,76.9,79.3,75.0,76.9,90.5,69.9,88.2,79.3],[64.1,70.0,56.2,76.9,91.8,54.7,null,64.1,null,85.0,90.5,100,null,100,100],[96.4,85.0,79.2,79.2,96.4,88.2,91.8,null,85.0,79.2,69.9,null,100,79.3,95.4],[85.0,81.1,62.4,84.2,93.9,100,null,85.0,null,79.3,100,79.2,100,null,56.2],[70.0,92.9,64.6,88.2,93.9,84.2,85.0,93.9,100,null,65.8,null,100,90.5,null],[85.0,95.4,95.4,79.2,90.5,88.2,90.5,95.4,79.3,100,null,100,null,null,null],[100,85.0,79.2,78.5,100,90.5,79.3,null,93.9,null,79.3,null,100,79.2,null],[97.0,65.8,65.8,65.8,90.5,95.4,null,56.2,65.8,79.3,null,79.3,null,null,null],[96.4,95.4,39.0,90.5,79.2,76.9,79.3,100,null,90.5,null,93.9,null,null,79.3],[90.3,100,93.9,56.2,69.9,100,79.3,69.9,100,null,null,null,null,100,null]],"stats":[{"name":"Mono-Red Burn","playerCount":27,"overallWinrate":47.5,"totalMatches":99,"metaShare":11.0,"skillSensitivity":3.15,"weightedWrRaw":50.1,"weightedWrAdj":52.2},{"name":"Mono-Blue Blue Terror","playerCount":26,"overallWinrate":51.0,"totalMatches":98,"metaShare":10.6,"skillSensitivity":3.3,"weightedWrRaw":52.5,"weightedWrAdj":51.7},{"name":"Mono-Green Elves","playerCount":26,"overallWinrate":57.0,"totalMatches":86,"metaShare":10.6,"skillSensitivity":3.56,"weightedWrRaw":57.4,"weightedWrAdj":55.8},{"name":"Jund Wildfire","playerCount":24,"overallWinrate":52.6,"totalMatches":76,"metaShare":9.8,"skillSensitivity":3.27,"weightedWrRaw":54.8,"weightedWrAdj":53.1},{"name":"Mono-Red Aggro","playerCount":24,"overallWinrate":39.2,"totalMatches":74,"metaShare":9.8,"skillSensitivity":1.65,"weightedWrRaw":37.2,"weightedWrAdj":38.5},{"name":"Mono-Red Madness Burn","playerCount":21,"overallWinrate":50.0,"totalMatches":88,"metaShare":8.5,"skillSensitivity":2.95,"weightedWrRaw":46.1,"weightedWrAdj":46.4},{"name":"Grixis Affinity","playerCount":18,"overallWinrate":39.6,"totalMatches":53,"metaShare":7.3,"skillSensitivity":4.07,"weightedWrRaw":43.1,"weightedWrAdj":43.0},{"name":"Azorius Caw-Gates","playerCount":11,"overallWinrate":58.8,"totalMatches":51,"metaShare":4.5,"skillSensitivity":4.02,"weightedWrRaw":54.5,"weightedWrAdj":54.9},{"name":"Mono-White Aggro","playerCount":12,"overallWinrate":48.8,"totalMatches":43,"metaShare":4.9,"skillSensitivity":5.02,"weightedWrRaw":53.1,"weightedWrAdj":53.2},{"name":"Mono-Blue Faeries","playerCount":12,"overallWinrate":52.9,"totalMatches":51,"metaShare":4.9,"skillSensitivity":4.17,"weightedWrRaw":56.0,"weightedWrAdj":54.1},{"name":"Gruul","playerCount":9,"overallWinrate":62.5,"totalMatches":32,"metaShare":3.7,"skillSensitivity":3.55,"weightedWrRaw":59.1,"weightedWrAdj":57.5},{"name":"Azorius Familiars","playerCount":11,"overallWinrate":53.3,"totalMatches":30,"metaShare":4.5,"skillSensitivity":3.55,"weightedWrRaw":56.0,"weightedWrAdj":55.3},{"name":"Selesnya Bogles","playerCount":8,"overallWinrate":36.0,"totalMatches":25,"metaShare":3.3,"skillSensitivity":6.18,"weightedWrRaw":25.8,"weightedWrAdj":31.3},{"name":"Rakdos Madness Burn","playerCount":9,"overallWinrate":45.5,"totalMatches":33,"metaShare":3.7,"skillSensitivity":5.05,"weightedWrRaw":45.1,"weightedWrAdj":46.7},{"name":"Golgari Gardens","playerCount":8,"overallWinrate":55.2,"totalMatches":29,"metaShare":3.3,"skillSensitivity":5.11,"weightedWrRaw":56.6,"weightedWrAdj":56.4}],"meta":{"totalPlayers":246,"totalMatches":434,"eloMatchRate":81.8,"classifiedMatches":434,"tournamentCount":8}}},{"format":"Vintage","all":{"archetypes":["Raker Shops","Mono-White Initiative","Dredge","Sphere Shops","Oath of Druids","Blue Tempo","Jewel Shops"],"rawMatrix":[[null,80.0,100.0,58.3,0.0,50.0,100.0],[20.0,null,0.0,0.0,null,100.0,null],[0.0,100.0,null,50.0,0.0,null,null],[41.7,100.0,50.0,null,33.3,100.0,null],[100.0,null,100.0,66.7,null,null,null],[50.0,0.0,null,0.0,null,null,100.0],[0.0,null,null,null,null,0.0,null]],"adjustedMatrix":[[null,80.0,100.0,58.3,0.0,50.0,100.0],[20.0,null,0.0,0.0,null,100.0,null],[0.0,100.0,null,50.0,0.0,null,null],[41.7,100.0,50.0,null,33.3,100.0,null],[100.0,null,100.0,66.7,null,null,null],[50.0,0.0,null,0.0,null,null,100.0],[0.0,null,null,null,null,0.0,null]],"deltaMatrix":[[null,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,null,0.0,0.0,null,0.0,null],[0.0,0.0,null,0.0,0.0,null,null],[0.0,0.0,0.0,null,0.0,0.0,null],[0.0,null,0.0,0.0,null,null,null],[0.0,0.0,null,0.0,null,null,0.0],[0.0,null,null,null,null,0.0,null]],"sampleSizes":[[0,5,4,12,1,2,1],[5,0,1,1,0,1,0],[4,1,0,2,1,0,0],[12,1,2,0,3,1,0],[1,0,1,3,0,0,0],[2,1,0,1,0,0,1],[1,0,0,0,0,1,0]],"wilsonLower":[[null,37.6,51.0,32.0,0,9.5,20.7],[3.6,null,0,0,null,20.7,null],[0,20.7,null,9.5,0,null,null],[19.3,20.7,9.5,null,6.1,20.7,null],[20.7,null,20.7,20.8,null,null,null],[9.5,0,null,0,null,null,20.7],[0,null,null,null,null,0,null]],"wilsonUpper":[[null,96.4,100,80.7,79.3,90.5,100],[62.4,null,79.3,79.3,null,100,null],[49.0,100,null,90.5,79.3,null,null],[68.0,100,90.5,null,79.2,100,null],[100,null,100,93.9,null,null,null],[90.5,79.3,null,79.3,null,null,100],[79.3,null,null,null,null,79.3,null]],"stats":[{"name":"Raker Shops","playerCount":181,"overallWinrate":68.0,"totalMatches":25,"metaShare":12.6,"skillSensitivity":0,"weightedWrRaw":68.0,"weightedWrAdj":68.0},{"name":"Mono-White Initiative","playerCount":151,"overallWinrate":25.0,"totalMatches":8,"metaShare":10.5,"skillSensitivity":0,"weightedWrRaw":25.0,"weightedWrAdj":25.0},{"name":"Dredge","playerCount":113,"overallWinrate":25.0,"totalMatches":8,"metaShare":7.8,"skillSensitivity":0,"weightedWrRaw":25.0,"weightedWrAdj":25.0},{"name":"Sphere Shops","playerCount":93,"overallWinrate":47.4,"totalMatches":19,"metaShare":6.5,"skillSensitivity":0,"weightedWrRaw":47.4,"weightedWrAdj":47.4},{"name":"Oath of Druids","playerCount":46,"overallWinrate":80.0,"totalMatches":5,"metaShare":3.2,"skillSensitivity":0,"weightedWrRaw":80.0,"weightedWrAdj":80.0},{"name":"Blue Tempo","playerCount":22,"overallWinrate":40.0,"totalMatches":5,"metaShare":1.5,"skillSensitivity":0,"weightedWrRaw":40.0,"weightedWrAdj":40.0},{"name":"Jewel Shops","playerCount":7,"overallWinrate":0.0,"totalMatches":2,"metaShare":0.5,"skillSensitivity":0,"weightedWrRaw":0.0,"weightedWrAdj":0.0}],"meta":{"totalPlayers":1440,"totalMatches":36,"eloMatchRate":0.0,"classifiedMatches":36,"tournamentCount":45}}}];
+
+let currentMode = 'raw';
+let currentFormat = 0;
+let currentSource = 'all';
+let minSample = 5;
+let sortCol = -1; // -1 = no sort, -2 = name, >=0 = col index, -3 = overall
+let sortAsc = false;
+let sortIndices = null;
+
+// ── Init ────────────────────────────────────────────────────
+function init() {
+  readURLState();
+
+  const sel = document.getElementById('formatSelect');
+  DATA.forEach((d, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = d.format;
+    sel.appendChild(opt);
+  });
+  sel.value = currentFormat;
+  sel.addEventListener('change', () => { currentFormat = parseInt(sel.value); currentSource = 'all'; sortCol = -1; sortIndices = null; updateURL(); render(); });
+
+  document.getElementById('minSampleSelect').value = minSample;
+  document.getElementById('minSampleSelect').addEventListener('change', (e) => {
+    minSample = parseInt(e.target.value);
+    updateURL();
+    render();
+  });
+
+  // Mobile deck picker
+  document.getElementById('mobileDeckSelect').addEventListener('change', () => render());
+
+  render();
+}
+
+// ── URL State ───────────────────────────────────────────────
+function readURLState() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('format')) {
+    const fi = DATA.findIndex(d => d.format.toLowerCase() === params.get('format').toLowerCase());
+    if (fi >= 0) currentFormat = fi;
+  }
+  if (params.has('mode') && ['raw','adjusted','delta'].includes(params.get('mode'))) {
+    currentMode = params.get('mode');
+  }
+  if (params.has('min')) {
+    const v = parseInt(params.get('min'));
+    if (!isNaN(v)) minSample = v;
+  }
+  if (params.has('source') && ['all','tabletop','mtgo'].includes(params.get('source'))) {
+    currentSource = params.get('source');
+  }
+}
+
+function updateURL() {
+  const params = new URLSearchParams();
+  params.set('format', DATA[currentFormat].format.toLowerCase());
+  params.set('mode', currentMode);
+  params.set('min', minSample);
+  if (currentSource !== 'all') params.set('source', currentSource);
+  history.replaceState(null, '', '?' + params.toString());
+}
+
+// ── Mode / Source setters ───────────────────────────────────
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('btnRaw').setAttribute('aria-pressed', mode === 'raw');
+  document.getElementById('btnAdj').setAttribute('aria-pressed', mode === 'adjusted');
+  document.getElementById('btnDelta').setAttribute('aria-pressed', mode === 'delta');
+  document.getElementById('btnRaw').classList.toggle('active', mode === 'raw');
+  document.getElementById('btnAdj').classList.toggle('active', mode === 'adjusted');
+  document.getElementById('btnDelta').classList.toggle('active', mode === 'delta');
+  document.getElementById('legendBar').style.display = mode === 'delta' ? 'none' : 'flex';
+  document.getElementById('deltaLegend').style.display = mode === 'delta' ? 'flex' : 'none';
+  updateURL();
+  render();
+}
+
+function setSource(source) {
+  currentSource = source;
+  ['All','Tabletop','Mtgo'].forEach(s => {
+    const btn = document.getElementById('btn' + s);
+    btn.setAttribute('aria-pressed', source === s.toLowerCase());
+    btn.classList.toggle('active', source === s.toLowerCase());
+  });
+  sortCol = -1;
+  sortIndices = null;
+  updateURL();
+  render();
+}
+
+// ── Data Access ─────────────────────────────────────────────
+function getFormatData() {
+  const fmt = DATA[currentFormat];
+  if (currentSource !== 'all' && fmt[currentSource]) {
+    return fmt[currentSource];
+  }
+  return fmt.all;
+}
+
+// ── Color Functions ─────────────────────────────────────────
+function getColor(wr) {
+  if (wr === null) return '';
+  const diff = wr - 50;
+  if (Math.abs(diff) < 1) return 'background:#374151;color:#e4e4e7';
+  if (diff > 0) {
+    const intensity = Math.min(diff / 25, 1);
+    if (intensity > 0.6) return 'background:#166534;color:#fff';
+    if (intensity > 0.3) return 'background:#15803d;color:#fff';
+    return 'background:#1a4d2e;color:#d1fae5';
+  } else {
+    const intensity = Math.min(Math.abs(diff) / 25, 1);
+    if (intensity > 0.6) return 'background:#991b1b;color:#fff';
+    if (intensity > 0.3) return 'background:#b91c1c;color:#fff';
+    return 'background:#4a1d1d;color:#fecaca';
+  }
+}
+
+function getDeltaColor(delta) {
+  if (delta === null || delta === 0) return 'background:#374151;color:#e4e4e7';
+  if (delta > 0) {
+    const intensity = Math.min(Math.abs(delta) / 10, 1);
+    const alpha = 0.15 + intensity * 0.6;
+    return `background:rgba(59,130,246,${alpha});color:#fff`;
+  } else {
+    const intensity = Math.min(Math.abs(delta) / 10, 1);
+    const alpha = 0.15 + intensity * 0.6;
+    return `background:rgba(245,158,11,${alpha});color:#fff`;
+  }
+}
+
+// ── Tooltip ─────────────────────────────────────────────────
+const tooltip = document.getElementById('tooltip');
+let tooltipTimeout;
+
+function showTooltip(e, html) {
+  clearTimeout(tooltipTimeout);
+  tooltip.innerHTML = html;
+  tooltip.classList.add('visible');
+
+  const rect = tooltip.getBoundingClientRect();
+  let x = e.clientX + 12;
+  let y = e.clientY + 12;
+
+  if (x + rect.width > window.innerWidth - 10) x = e.clientX - rect.width - 12;
+  if (y + rect.height > window.innerHeight - 10) y = e.clientY - rect.height - 12;
+  if (x < 5) x = 5;
+  if (y < 5) y = 5;
+
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  tooltipTimeout = setTimeout(() => tooltip.classList.remove('visible'), 100);
+}
+
+// ── Sort ────────────────────────────────────────────────────
+function sortBy(col) {
+  if (sortCol === col) {
+    sortAsc = !sortAsc;
+  } else {
+    sortCol = col;
+    sortAsc = col === -2; // Name sort defaults ascending
+  }
+  render();
+}
+
+function computeSortIndices(d) {
+  const n = d.archetypes.length;
+  let indices = Array.from({length: n}, (_, i) => i);
+  const matrix = currentMode === 'delta' ? d.deltaMatrix :
+                 currentMode === 'adjusted' ? d.adjustedMatrix : d.rawMatrix;
+
+  if (sortCol === -2) {
+    // Sort by name
+    indices.sort((a, b) => {
+      const cmp = d.archetypes[a].localeCompare(d.archetypes[b]);
+      return sortAsc ? cmp : -cmp;
+    });
+  } else if (sortCol === -3) {
+    // Sort by overall win rate
+    indices.sort((a, b) => {
+      const va = d.stats[a].overallWinrate;
+      const vb = d.stats[b].overallWinrate;
+      return sortAsc ? va - vb : vb - va;
+    });
+  } else if (sortCol >= 0 && sortCol < n) {
+    // Sort by win rate against specific archetype
+    indices.sort((a, b) => {
+      const va = matrix[a][sortCol];
+      const vb = matrix[b][sortCol];
+      if (va === null && vb === null) return 0;
+      if (va === null) return 1;
+      if (vb === null) return -1;
+      return sortAsc ? va - vb : vb - va;
+    });
+  }
+
+  return indices;
+}
+
+// ── Render ───────────────────────────────────────────────────
+function render() {
+  const wrapper = document.getElementById('matrixWrapper');
+  wrapper.classList.add('fading');
+  setTimeout(() => {
+    doRender();
+    wrapper.classList.remove('fading');
+  }, 100);
+}
+
+function doRender() {
+  const fmt = DATA[currentFormat];
+  const d = getFormatData();
+
+  if (!d || !d.archetypes || d.archetypes.length === 0) {
+    document.getElementById('matrixTable').innerHTML = '<tr><td style="padding:2rem;color:var(--text-muted)">No data available for this format/source combination.</td></tr>';
+    document.getElementById('metaInfo').innerHTML = '';
+    document.getElementById('insights').innerHTML = '';
+    document.getElementById('leaderboard').innerHTML = '';
+    return;
+  }
+
+  const matrix = currentMode === 'delta' ? d.deltaMatrix :
+                 currentMode === 'adjusted' ? d.adjustedMatrix : d.rawMatrix;
+  const archetypes = d.archetypes;
+  const sizes = d.sampleSizes;
+  const stats = d.stats;
+  const n = archetypes.length;
+
+  // Source toggle visibility
+  const hasMultipleSources = fmt.mtgo && fmt.tabletop;
+  document.getElementById('sourceGroup').style.display = hasMultipleSources ? 'flex' : 'none';
+
+  // Sort indices
+  if (sortCol !== -1) {
+    sortIndices = computeSortIndices(d);
+  } else {
+    sortIndices = Array.from({length: n}, (_, i) => i);
+  }
+
+  // ── Data Freshness ──
+  const meta = d.meta;
+  const dr = meta.dateRange;
+  if (dr) {
+    document.getElementById('dataFreshness').textContent = `Data: ${dr[0]} to ${dr[1]}`;
+  } else {
+    document.getElementById('dataFreshness').textContent = 'Data: Jan-Mar 2026';
+  }
+
+  // ── Insights ──
+  renderInsights(d, fmt);
+
+  // ── Meta Info ──
+  document.getElementById('metaInfo').innerHTML =
+    `<span>Format: <strong>${fmt.format}</strong></span>` +
+    `<span>Source: <strong>${currentSource === 'all' ? 'All' : currentSource === 'mtgo' ? 'MTGO' : 'Tabletop'}</strong></span>` +
+    `<span>Tournaments: <strong>${meta.tournamentCount || '?'}</strong></span>` +
+    `<span>Matches: <strong>${meta.totalMatches.toLocaleString()}</strong></span>` +
+    `<span>ELO Coverage: <strong>${meta.eloMatchRate}%</strong></span>`;
+
+  // ── Build Table ──
+  let arrowFor = (col) => {
+    if (sortCol !== col) return '';
+    return `<span class="sort-arrow">${sortAsc ? '\u25B2' : '\u25BC'}</span>`;
+  };
+
+  let html = '<thead><tr>';
+  html += `<th class="corner" onclick="sortBy(-2)" tabindex="0" role="columnheader" aria-label="Sort by archetype name">Archetype${arrowFor(-2)}</th>`;
+  for (let jj = 0; jj < n; jj++) {
+    const j = sortIndices[jj]; // Column order follows row sort? No - columns stay fixed, rows sort.
+    html += `<th class="col-header" onclick="sortBy(${j})" tabindex="0" role="columnheader" aria-label="Sort by win rate vs ${archetypes[j]}">${archetypes[j]}${arrowFor(j)}</th>`;
+  }
+  html += `<th class="col-header overall-col" onclick="sortBy(-3)" tabindex="0" role="columnheader" aria-label="Sort by overall win rate">Overall${arrowFor(-3)}</th>`;
+  html += '</tr></thead><tbody>';
+
+  for (let ii = 0; ii < n; ii++) {
+    const i = sortIndices[ii];
+    const s = stats[i];
+    const share = s.metaShare || 0;
+
+    html += `<tr><th class="row-header" data-row="${i}" tabindex="0" aria-label="${archetypes[i]}, ${share}% of meta">${archetypes[i]}</th>`;
+
+    for (let j = 0; j < n; j++) {
+      if (i === j) {
+        html += '<td class="mirror">--</td>';
+        continue;
+      }
+
+      const wr = matrix[i][j];
+      const count = sizes[i][j];
+      const rawWr = d.rawMatrix[i][j];
+      const adjWr = d.adjustedMatrix[i][j];
+      const deltaVal = d.deltaMatrix ? d.deltaMatrix[i][j] : null;
+      const wl = d.wilsonLower ? d.wilsonLower[i][j] : null;
+      const wu = d.wilsonUpper ? d.wilsonUpper[i][j] : null;
+
+      if (wr === null || count === 0) {
+        html += '<td class="no-data">--</td>';
+        continue;
+      }
+
+      // Hard hide <5 matches
+      if (count < 5) {
+        html += '<td class="no-data">--</td>';
+        continue;
+      }
+
+      const lowSample = count < 30;
+      const style = currentMode === 'delta' ? getDeltaColor(wr) : getColor(wr);
+      const cls = `cell-value${lowSample ? ' low-sample' : ''}`;
+
+      // Format display value
+      let displayVal;
+      let indicator = '';
+      if (currentMode === 'delta') {
+        const sign = wr > 0 ? '+' : '';
+        displayVal = `${sign}${wr.toFixed(1)}`;
+        indicator = wr > 0 ? '+' : (wr < 0 ? '-' : '');
+      } else {
+        displayVal = `${wr.toFixed(1)}`;
+        indicator = wr > 50 ? '+' : (wr < 50 ? '-' : '');
+      }
+
+      const prefix = lowSample ? '~' : '';
+
+      // Tooltip data attributes
+      const ttData = `data-row-arch="${archetypes[i]}" data-col-arch="${archetypes[j]}" data-raw="${rawWr}" data-adj="${adjWr}" data-delta="${deltaVal}" data-count="${count}" data-wl="${wl}" data-wu="${wu}"`;
+
+      html += `<td class="${cls}" style="${style}" ${ttData} aria-label="${archetypes[i]} vs ${archetypes[j]}: ${displayVal}%, ${count} matches">`;
+      html += `<span class="sr-only">${indicator}</span>${prefix}${displayVal}`;
+      html += `<span class="sample-size">n=${count}</span>`;
+      html += '</td>';
+    }
+
+    // Overall column
+    const overallStyle = currentMode === 'delta' ? '' : getColor(s.overallWinrate);
+    const overallIndicator = s.overallWinrate > 50 ? '+' : (s.overallWinrate < 50 ? '-' : '');
+    html += `<td class="cell-value overall-col" style="${overallStyle}" aria-label="Overall: ${s.overallWinrate}%, ${s.totalMatches} matches">${overallIndicator}${s.overallWinrate.toFixed(1)}<span class="sample-size">${s.totalMatches}</span></td>`;
+    html += '</tr>';
+  }
+
+  html += '</tbody>';
+  document.getElementById('matrixTable').innerHTML = html;
+
+  // ── Attach Tooltip Events ──
+  document.querySelectorAll('td.cell-value[data-row-arch]').forEach(td => {
+    const handler = (e) => {
+      const ra = td.getAttribute('data-row-arch');
+      const ca = td.getAttribute('data-col-arch');
+      const raw = td.getAttribute('data-raw');
+      const adj = td.getAttribute('data-adj');
+      const delta = td.getAttribute('data-delta');
+      const count = td.getAttribute('data-count');
+      const wl = td.getAttribute('data-wl');
+      const wu = td.getAttribute('data-wu');
+
+      let ttHtml = `<div class="tt-title">${ra} vs ${ca}</div>`;
+      ttHtml += `<div class="tt-row"><span class="tt-label">Raw Win Rate</span><span class="tt-value">${raw !== 'null' ? raw + '%' : 'N/A'}</span></div>`;
+      ttHtml += `<div class="tt-row"><span class="tt-label">Skill-Adjusted</span><span class="tt-value">${adj !== 'null' ? adj + '%' : 'N/A'}</span></div>`;
+
+      if (delta !== 'null') {
+        const dv = parseFloat(delta);
+        const cls = dv > 0 ? 'tt-blue' : (dv < 0 ? 'tt-orange' : '');
+        const sign = dv > 0 ? '+' : '';
+        ttHtml += `<div class="tt-row"><span class="tt-label">Delta</span><span class="tt-value ${cls}">${sign}${delta} pp</span></div>`;
+      }
+
+      ttHtml += `<div class="tt-row"><span class="tt-label">Sample Size</span><span class="tt-value">${count} matches</span></div>`;
+
+      if (wl !== 'null' && wu !== 'null') {
+        ttHtml += `<div class="tt-row"><span class="tt-label">95% CI (Wilson)</span><span class="tt-value">${wl}% - ${wu}%</span></div>`;
+      }
+
+      showTooltip(e, ttHtml);
+    };
+
+    td.addEventListener('mouseenter', handler);
+    td.addEventListener('touchstart', handler, {passive: true});
+    td.addEventListener('mouseleave', hideTooltip);
+    td.addEventListener('mousemove', (e) => {
+      if (tooltip.classList.contains('visible')) {
+        tooltip.style.left = (e.clientX + 12) + 'px';
+        tooltip.style.top = (e.clientY + 12) + 'px';
+      }
+    });
+  });
+
+  // Keyboard navigation for table headers
+  document.querySelectorAll('th[tabindex]').forEach(th => {
+    th.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        th.click();
+      }
+    });
+  });
+
+  // ── Leaderboard ──
+  renderLeaderboard(d);
+
+  // ── Recommender ──
+  renderRecommender(d);
+
+  // ── Mobile Picker ──
+  renderMobilePicker(d);
+}
+
+// ── Insights ────────────────────────────────────────────────
+function renderInsights(d, fmt) {
+  const stats = d.stats;
+  if (!stats.length) { document.getElementById('insights').innerHTML = ''; return; }
+
+  // Highest WR deck
+  let bestDeck = stats.reduce((a, b) => a.overallWinrate > b.overallWinrate ? a : b);
+
+  // Most popular deck
+  let popularDeck = stats.reduce((a, b) => (a.metaShare || 0) > (b.metaShare || 0) ? a : b);
+
+  // Most skill-dependent matchup
+  let maxDelta = 0, maxDeltaMatch = '';
+  const n = d.archetypes.length;
+  if (d.deltaMatrix) {
+    for (let i = 0; i < n; i++) {
+      for (let j = i+1; j < n; j++) {
+        if (d.deltaMatrix[i][j] !== null) {
+          const absDelta = Math.abs(d.deltaMatrix[i][j]);
+          if (absDelta > maxDelta && d.sampleSizes[i][j] >= 5) {
+            maxDelta = absDelta;
+            maxDeltaMatch = `${d.archetypes[i]} vs ${d.archetypes[j]}`;
+          }
+        }
+      }
+    }
+  }
+
+  // Biggest overperformer
+  let maxSensitivity = stats.reduce((a, b) => (a.skillSensitivity || 0) > (b.skillSensitivity || 0) ? a : b);
+
+  const el = document.getElementById('insights');
+  el.innerHTML = `
+    <div class="insight-card">
+      <div class="insight-label">Highest Win Rate</div>
+      <div class="insight-value" style="color:#4ade80">${bestDeck.overallWinrate.toFixed(1)}%</div>
+      <div class="insight-detail">${bestDeck.name}</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-label">Most Popular</div>
+      <div class="insight-value">${(popularDeck.metaShare || 0).toFixed(1)}%</div>
+      <div class="insight-detail">${popularDeck.name}</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-label">Biggest Skill Swing</div>
+      <div class="insight-value" style="color:var(--accent)">${maxDelta.toFixed(1)} pp</div>
+      <div class="insight-detail">${maxDeltaMatch || 'N/A'}</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-label">Most Skill-Dependent</div>
+      <div class="insight-value" style="color:var(--orange-delta)">${(maxSensitivity.skillSensitivity || 0).toFixed(1)} pp avg</div>
+      <div class="insight-detail">${maxSensitivity.name}</div>
+    </div>
+  `;
+}
+
+// ── Leaderboard ─────────────────────────────────────────────
+function renderLeaderboard(d) {
+  const stats = d.stats;
+  if (!stats.length || !d.deltaMatrix) { document.getElementById('leaderboard').innerHTML = ''; return; }
+
+  const n = d.archetypes.length;
+
+  // Compute average delta for each archetype
+  const avgDeltas = stats.map((s, i) => {
+    const deltas = [];
+    for (let j = 0; j < n; j++) {
+      if (d.deltaMatrix[i][j] !== null && d.sampleSizes[i][j] >= 5) {
+        deltas.push(d.deltaMatrix[i][j]);
+      }
+    }
+    const avg = deltas.length > 0 ? deltas.reduce((a, b) => a + b, 0) / deltas.length : 0;
+    return { name: s.name, avgDelta: avg };
+  });
+
+  // Sort: most carried by skill (negative delta = raw overestimates)
+  const carried = [...avgDeltas].sort((a, b) => a.avgDelta - b.avgDelta).slice(0, 7);
+  // Most underrated (positive delta = raw underestimates)
+  const underrated = [...avgDeltas].sort((a, b) => b.avgDelta - a.avgDelta).slice(0, 7);
+
+  const maxAbs = Math.max(
+    ...carried.map(d => Math.abs(d.avgDelta)),
+    ...underrated.map(d => Math.abs(d.avgDelta)),
+    1
+  );
+
+  function renderItems(items, color) {
+    return items.map((item, idx) => {
+      const barWidth = Math.min(Math.abs(item.avgDelta) / maxAbs * 100, 100);
+      const sign = item.avgDelta > 0 ? '+' : '';
+      return `
+        <div class="leaderboard-item">
+          <span class="leaderboard-rank">${idx + 1}.</span>
+          <span class="leaderboard-name">${item.name}</span>
+          <div class="leaderboard-bar-container">
+            <div class="leaderboard-bar" style="width:${barWidth}%;background:${color}"></div>
+          </div>
+          <span class="leaderboard-value" style="color:${color}">${sign}${item.avgDelta.toFixed(1)}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  document.getElementById('leaderboard').innerHTML = `
+    <div class="leaderboard-section">
+      <h3>Raw Data Overestimates (Carried by Pilot Skill)</h3>
+      ${renderItems(carried, 'var(--orange-delta)')}
+    </div>
+    <div class="leaderboard-section">
+      <h3>Raw Data Underestimates (Better Than They Look)</h3>
+      ${renderItems(underrated, 'var(--blue-delta)')}
+    </div>
+  `;
+}
+
+// ── Recommender ─────────────────────────────────────────────
+function renderRecommender(d) {
+  const stats = d.stats;
+  if (!stats.length) return;
+
+  const n = d.archetypes.length;
+  const controls = document.getElementById('recommenderControls');
+  const results = document.getElementById('recommenderResults');
+
+  // Build sliders (pre-fill with actual meta shares)
+  let slidersHtml = '';
+  stats.forEach((s, i) => {
+    const share = s.metaShare || 0;
+    slidersHtml += `
+      <div class="meta-slider">
+        <label for="slider-${i}">${s.name}</label>
+        <input type="range" id="slider-${i}" min="0" max="50" step="0.5" value="${share}" oninput="updateRecommender()" aria-label="${s.name} meta share">
+        <span class="meta-pct" id="pct-${i}">${share.toFixed(1)}%</span>
+      </div>
+    `;
+  });
+  controls.innerHTML = slidersHtml;
+
+  updateRecommender();
+}
+
+function updateRecommender() {
+  const d = getFormatData();
+  if (!d || !d.stats.length) return;
+
+  const n = d.archetypes.length;
+  const matrix = d.adjustedMatrix;
+
+  // Read slider values
+  const shares = [];
+  for (let i = 0; i < n; i++) {
+    const slider = document.getElementById(`slider-${i}`);
+    const pct = document.getElementById(`pct-${i}`);
+    if (slider && pct) {
+      shares.push(parseFloat(slider.value));
+      pct.textContent = parseFloat(slider.value).toFixed(1) + '%';
+    } else {
+      shares.push(0);
+    }
+  }
+
+  // Compute weighted expected WR for each deck
+  const deckScores = [];
+  for (let i = 0; i < n; i++) {
+    let weightedWr = 0;
+    let totalWeight = 0;
+    for (let j = 0; j < n; j++) {
+      if (i === j || matrix[i][j] === null) continue;
+      weightedWr += matrix[i][j] * shares[j];
+      totalWeight += shares[j];
+    }
+    const expectedWr = totalWeight > 0 ? weightedWr / totalWeight : 50;
+    deckScores.push({ name: d.archetypes[i], wr: expectedWr, idx: i });
+  }
+
+  // Sort by expected WR
+  deckScores.sort((a, b) => b.wr - a.wr);
+
+  const results = document.getElementById('recommenderResults');
+  results.innerHTML = deckScores.map((ds, rank) => {
+    const color = ds.wr >= 50 ? '#4ade80' : (ds.wr < 48 ? '#f87171' : 'var(--text)');
+    return `
+      <div class="rec-item">
+        <span class="rec-rank">#${rank + 1}</span>
+        <span class="rec-name">${ds.name}</span>
+        <span class="rec-wr" style="color:${color}">${ds.wr.toFixed(1)}%</span>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Mobile Picker ───────────────────────────────────────────
+function renderMobilePicker(d) {
+  const sel = document.getElementById('mobileDeckSelect');
+  const list = document.getElementById('mobileMatchupList');
+
+  // Build options
+  const currentVal = sel.value;
+  sel.innerHTML = '';
+  d.archetypes.forEach((a, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = a;
+    sel.appendChild(opt);
+  });
+  if (currentVal && parseInt(currentVal) < d.archetypes.length) {
+    sel.value = currentVal;
+  }
+
+  const deckIdx = parseInt(sel.value) || 0;
+  const matrix = currentMode === 'delta' ? d.deltaMatrix :
+                 currentMode === 'adjusted' ? d.adjustedMatrix : d.rawMatrix;
+
+  let items = [];
+  for (let j = 0; j < d.archetypes.length; j++) {
+    if (j === deckIdx) continue;
+    const wr = matrix[deckIdx][j];
+    const count = d.sampleSizes[deckIdx][j];
+    if (wr === null || count < 5) continue;
+    items.push({ name: d.archetypes[j], wr, count });
+  }
+
+  // Sort by WR
+  items.sort((a, b) => b.wr - a.wr);
+
+  list.innerHTML = items.map(item => {
+    let color, indicator;
+    if (currentMode === 'delta') {
+      color = item.wr > 0 ? 'var(--blue-delta)' : 'var(--orange-delta)';
+      indicator = item.wr > 0 ? '+' : '-';
+    } else {
+      color = item.wr >= 55 ? '#4ade80' : (item.wr <= 45 ? '#f87171' : 'var(--text)');
+      indicator = item.wr > 50 ? '+' : (item.wr < 50 ? '-' : '=');
+    }
+
+    const prefix = item.count < 30 ? '~' : '';
+    const displayVal = currentMode === 'delta' ? `${item.wr > 0 ? '+' : ''}${item.wr.toFixed(1)}` : item.wr.toFixed(1) + '%';
+
+    return `
+      <div class="mobile-matchup">
+        <span class="mu-indicator" style="color:${color}">${indicator}</span>
+        <span class="mu-name">${item.name}</span>
+        <span class="mu-wr" style="color:${color}">${prefix}${displayVal}</span>
+        <span class="mu-sample">n=${item.count}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── CSV Export ───────────────────────────────────────────────
+function exportCSV() {
+  const d = getFormatData();
+  if (!d || !d.archetypes.length) return;
+
+  const matrix = currentMode === 'delta' ? d.deltaMatrix :
+                 currentMode === 'adjusted' ? d.adjustedMatrix : d.rawMatrix;
+  const n = d.archetypes.length;
+
+  let csv = ',' + d.archetypes.join(',') + ',Overall\n';
+  for (let i = 0; i < n; i++) {
+    csv += d.archetypes[i];
+    for (let j = 0; j < n; j++) {
+      if (i === j) csv += ',--';
+      else if (matrix[i][j] === null) csv += ',';
+      else csv += ',' + matrix[i][j];
+    }
+    csv += ',' + d.stats[i].overallWinrate;
+    csv += '\n';
+  }
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mtg-${DATA[currentFormat].format.toLowerCase()}-${currentMode}-matrix.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Screen reader only styles ───────────────────────────────
+const srStyle = document.createElement('style');
+srStyle.textContent = '.sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0 }';
+document.head.appendChild(srStyle);
+
+init();
+</script>
+
+</body>
+</html>

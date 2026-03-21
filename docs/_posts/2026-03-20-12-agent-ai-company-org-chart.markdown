@@ -118,4 +118,4 @@ This is an org chart, not a replacement for judgment. The agents are very good a
 
 (This post was reviewed by Cipher before publication. Cipher flagged the original draft for unsourced claims and a missing pipeline stage. Adversarial review works on prose too, apparently.)
 
-The system's been running for about a month. I'll write about what's actually breaking once I have more data.
+I'll write about what's actually breaking once I have more data.

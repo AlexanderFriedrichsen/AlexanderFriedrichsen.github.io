@@ -973,6 +973,15 @@
         <button id="btnMtgo" aria-pressed="false" onclick="setSource('mtgo')">MTGO</button>
       </div>
     </div>
+    <div class="control-group">
+      <label for="timePeriodSelect">Time Period</label>
+      <select id="timePeriodSelect" aria-label="Filter by time period">
+        <option value="all" selected>All Time</option>
+        <option value="90" disabled>Last 90 Days (coming soon)</option>
+        <option value="60" disabled>Last 60 Days (coming soon)</option>
+        <option value="30" disabled>Last 30 Days (coming soon)</option>
+      </select>
+    </div>
     <button class="btn-export" onclick="exportCSV()" aria-label="Export matrix as CSV">Export CSV</button>
   </div>
 
@@ -1099,6 +1108,7 @@ let currentMode = 'raw';
 let currentFormat = 0;
 let currentSource = 'all';
 let minSample = 5;
+let currentTimePeriod = 'all';
 let sortCol = -1; // -1 = no sort, -2 = name, >=0 = col index, -3 = overall
 let sortAsc = false;
 let sortIndices = null;
@@ -1120,6 +1130,13 @@ function init() {
   document.getElementById('minSampleSelect').value = minSample;
   document.getElementById('minSampleSelect').addEventListener('change', (e) => {
     minSample = parseInt(e.target.value);
+    updateURL();
+    render();
+  });
+
+  document.getElementById('timePeriodSelect').value = currentTimePeriod;
+  document.getElementById('timePeriodSelect').addEventListener('change', (e) => {
+    currentTimePeriod = e.target.value;
     updateURL();
     render();
   });
@@ -1147,6 +1164,9 @@ function readURLState() {
   if (params.has('source') && ['all','tabletop','mtgo'].includes(params.get('source'))) {
     currentSource = params.get('source');
   }
+  if (params.has('period') && ['all','90','60','30'].includes(params.get('period'))) {
+    currentTimePeriod = params.get('period');
+  }
 }
 
 function updateURL() {
@@ -1155,6 +1175,7 @@ function updateURL() {
   params.set('mode', currentMode);
   params.set('min', minSample);
   if (currentSource !== 'all') params.set('source', currentSource);
+  if (currentTimePeriod !== 'all') params.set('period', currentTimePeriod);
   history.replaceState(null, '', '?' + params.toString());
 }
 
@@ -1340,11 +1361,16 @@ function doRender() {
   // ── Data Freshness ──
   const meta = d.meta;
   const dr = meta.dateRange;
+  let freshnessText;
   if (dr) {
-    document.getElementById('dataFreshness').textContent = `Data: ${dr[0]} to ${dr[1]}`;
+    freshnessText = `Data: ${dr[0]} to ${dr[1]}`;
   } else {
-    document.getElementById('dataFreshness').textContent = 'Data: Jan-Mar 2026';
+    freshnessText = 'Data: Jan-Mar 2026';
   }
+  if (currentTimePeriod !== 'all') {
+    freshnessText += ` (showing: All Time — ${currentTimePeriod}-day filter pending)`;
+  }
+  document.getElementById('dataFreshness').textContent = freshnessText;
 
   // ── Insights ──
   renderInsights(d, fmt);

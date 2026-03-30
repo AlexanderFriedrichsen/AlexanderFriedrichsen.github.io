@@ -12,34 +12,75 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MTG Skill-Adjusted Meta Analyzer">
 <meta name="twitter:description" content="Interactive MTG matchup matrices with ELO-based skill adjustments across 6 formats.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #232733;
-    --border: #2d3142;
-    --text: #e4e4e7;
-    --text-muted: #9ca3af;
-    --accent: #818cf8;
-    --accent-dim: #4f46e5;
-    --green-strong: #166534;
-    --green-mid: #15803d;
-    --green-light: #22c55e;
-    --red-strong: #991b1b;
-    --red-mid: #dc2626;
-    --neutral: #374151;
-    --blue-delta: #3b82f6;
-    --orange-delta: #f59e0b;
+    --bg: #0d0f14;
+    --surface: #151821;
+    --surface2: #1c2030;
+    --border: #2a2e42;
+    --text: #e8e8ec;
+    --text-muted: #8b92a8;
+    --accent: #7dd3c0;
+    --accent-dim: #2d6b5e;
+    --accent-hot: #e87da1;
+    --accent-warm: #c49cde;
+    --green-strong: #145a30;
+    --green-mid: #1a7a42;
+    --green-light: #3dd68c;
+    --red-strong: #8a1c1c;
+    --red-mid: #d63030;
+    --neutral: #2e3648;
+    --blue-delta: #5ba8f5;
+    --orange-delta: #f0a030;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
     min-height: 100vh;
+  }
+
+  /* Grain texture overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    filter: url(#grain);
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    z-index: 9999;
+    will-change: transform;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body::after { display: none; }
+  }
+
+  /* Typography: headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', -apple-system, sans-serif;
+  }
+
+  /* Typography: data/numbers — monospace */
+  .cell-value, .elo-bar-value, .elo-box-values, .rec-wr, .rec-rank,
+  .leaderboard-value, .leaderboard-rank, .meta-pct, .mu-wr, .mu-sample,
+  .sample-size, .data-freshness, .insight-label, .slider-total,
+  code, .mobile-matchup .mu-indicator {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+  }
+
+  /* Typography: insight values use heading font */
+  .insight-value {
+    font-family: 'Space Grotesk', -apple-system, sans-serif;
+    font-size: 1.15rem !important;
   }
 
   .container {
@@ -59,10 +100,11 @@
     font-size: 1.75rem;
     font-weight: 700;
     margin-bottom: 0.25rem;
-    background: linear-gradient(135deg, #818cf8, #c084fc);
+    background: linear-gradient(135deg, #7dd3c0, #e87da1);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    filter: drop-shadow(0 0 40px rgba(125, 211, 192, 0.2));
   }
 
   header p {
@@ -80,10 +122,16 @@
 
   .insight-card {
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255,255,255,0.04);
     border-radius: 8px;
-    padding: 0.75rem 1rem;
+    padding: 1rem 1.25rem;
     font-size: 0.85rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px rgba(125, 211, 192, 0.05);
+    transition: box-shadow 0.2s;
+  }
+
+  .insight-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 0 1px rgba(125, 211, 192, 0.1);
   }
 
   .insight-card .insight-label {
@@ -226,9 +274,10 @@
   .matrix-wrapper {
     overflow-x: auto;
     border-radius: 8px;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255,255,255,0.04);
     background: var(--surface);
     transition: opacity 0.2s ease;
+    box-shadow: 0 0 20px rgba(125, 211, 192, 0.05);
   }
 
   .matrix-wrapper.fading {
@@ -302,7 +351,13 @@
   }
 
   td.mirror {
-    background: var(--surface2);
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--surface2),
+      var(--surface2) 3px,
+      rgba(255,255,255,0.02) 3px,
+      rgba(255,255,255,0.02) 6px
+    );
     color: var(--text-muted);
     font-size: 0.65rem;
   }
@@ -343,7 +398,7 @@
   /* ── Tooltip ── */
   .custom-tooltip {
     position: fixed;
-    background: #1e2030;
+    background: #181c28;
     border: 1px solid var(--accent);
     border-radius: 8px;
     padding: 0.75rem 1rem;
@@ -398,9 +453,10 @@
 
   .leaderboard-section {
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255,255,255,0.04);
     border-radius: 8px;
     padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px rgba(125, 211, 192, 0.05);
   }
 
   .leaderboard-section h3 {
@@ -459,9 +515,10 @@
   .recommender {
     margin-top: 1.5rem;
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255,255,255,0.04);
     border-radius: 8px;
     padding: 1rem 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px rgba(125, 211, 192, 0.05);
   }
 
   .recommender h2 {
@@ -551,9 +608,10 @@
 
   .elo-panel {
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255,255,255,0.04);
     border-radius: 8px;
     padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px rgba(125, 211, 192, 0.05);
   }
 
   .elo-panel h3 {
@@ -627,14 +685,14 @@
   .elo-box-range {
     position: absolute;
     height: 100%;
-    background: rgba(129, 140, 248, 0.2);
+    background: rgba(125, 211, 192, 0.15);
     border-radius: 2px;
   }
 
   .elo-box-iqr {
     position: absolute;
     height: 100%;
-    background: rgba(129, 140, 248, 0.5);
+    background: rgba(125, 211, 192, 0.35);
     border-radius: 2px;
   }
 
@@ -642,7 +700,7 @@
     position: absolute;
     width: 2px;
     height: 100%;
-    background: var(--accent);
+    background: var(--accent-hot);
   }
 
   .elo-box-values {
@@ -680,7 +738,9 @@
     padding: 1.25rem;
     background: var(--surface);
     border-radius: 8px;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-left: 2px solid var(--accent);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px rgba(125, 211, 192, 0.05);
   }
 
   .methodology h2 {
@@ -836,9 +896,42 @@
   @media (min-width: 769px) {
     .mobile-picker { display: none !important; }
   }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 8px; height: 8px; background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+  /* ── Matrix row hover ── */
+  table tr:hover td:not(.mirror) {
+    background-image: linear-gradient(rgba(125, 211, 192, 0.03), rgba(125, 211, 192, 0.03));
+  }
+
+  /* ── Toggle group pill shape ── */
+  .toggle-group {
+    border-radius: 20px;
+  }
+
+  /* ── Footer monospace data freshness ── */
+  .data-freshness {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Meta info panel ── */
+  .meta-info {
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px rgba(125, 211, 192, 0.05);
+  }
 </style>
 </head>
 <body>
+
+<svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <filter id="grain">
+    <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+    <feColorMatrix type="saturate" values="0"/>
+  </filter>
+</svg>
 
 <div class="container">
   <header>
@@ -888,13 +981,13 @@
   <div class="legend" id="legendBar">
     <span>Unfavorable</span>
     <div class="legend-bar">
-      <span style="background:#991b1b"></span>
+      <span style="background:#8a1c1c"></span>
       <span style="background:#b91c1c"></span>
-      <span style="background:#dc2626"></span>
-      <span style="background:#6b7280"></span>
-      <span style="background:#16a34a"></span>
-      <span style="background:#15803d"></span>
-      <span style="background:#166534"></span>
+      <span style="background:#d63030"></span>
+      <span style="background:#2e3648"></span>
+      <span style="background:#1a7a42"></span>
+      <span style="background:#145a30"></span>
+      <span style="background:#0f4a24"></span>
     </div>
     <span>Favorable</span>
     <span style="margin-left:0.75rem;font-style:italic">~ = low confidence &middot; -- = &lt;5 matches</span>
@@ -1106,30 +1199,30 @@ function getFormatData() {
 function getColor(wr) {
   if (wr === null) return '';
   const diff = wr - 50;
-  if (Math.abs(diff) < 1) return 'background:#374151;color:#e4e4e7';
+  if (Math.abs(diff) < 1) return 'background:#2e3648;color:#e8e8ec';
   if (diff > 0) {
     const intensity = Math.min(diff / 25, 1);
-    if (intensity > 0.6) return 'background:#166534;color:#fff';
-    if (intensity > 0.3) return 'background:#15803d;color:#fff';
+    if (intensity > 0.6) return 'background:#145a30;color:#fff';
+    if (intensity > 0.3) return 'background:#1a7a42;color:#fff';
     return 'background:#1a4d2e;color:#d1fae5';
   } else {
     const intensity = Math.min(Math.abs(diff) / 25, 1);
-    if (intensity > 0.6) return 'background:#991b1b;color:#fff';
+    if (intensity > 0.6) return 'background:#8a1c1c;color:#fff';
     if (intensity > 0.3) return 'background:#b91c1c;color:#fff';
     return 'background:#4a1d1d;color:#fecaca';
   }
 }
 
 function getDeltaColor(delta) {
-  if (delta === null || delta === 0) return 'background:#374151;color:#e4e4e7';
+  if (delta === null || delta === 0) return 'background:#2e3648;color:#e8e8ec';
   if (delta > 0) {
     const intensity = Math.min(Math.abs(delta) / 10, 1);
     const alpha = 0.15 + intensity * 0.6;
-    return `background:rgba(59,130,246,${alpha});color:#fff`;
+    return `background:rgba(91,168,245,${alpha});color:#fff`;
   } else {
     const intensity = Math.min(Math.abs(delta) / 10, 1);
     const alpha = 0.15 + intensity * 0.6;
-    return `background:rgba(245,158,11,${alpha});color:#fff`;
+    return `background:rgba(240,160,48,${alpha});color:#fff`;
   }
 }
 

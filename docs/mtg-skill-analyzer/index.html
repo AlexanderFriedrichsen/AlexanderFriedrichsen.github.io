@@ -302,7 +302,7 @@
     background: var(--surface2);
     font-weight: 600;
     position: sticky;
-    top: 0;
+    top: 40px;
     z-index: 1;
     cursor: pointer;
     user-select: none;
@@ -922,6 +922,52 @@
     border: 1px solid rgba(255,255,255,0.04);
     box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px rgba(125, 211, 192, 0.05);
   }
+
+  /* ── Site Nav ── */
+  .site-nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .site-nav a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .site-nav a:hover {
+    text-decoration: underline;
+    color: var(--accent-hot);
+  }
+
+  .site-nav .nav-brand {
+    font-weight: 700;
+    font-size: 0.95rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent-hot));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .site-nav .nav-links {
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+  }
+
+  @media (max-width: 768px) {
+    .site-nav { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
+    .site-nav .nav-links { gap: 0.75rem; }
+  }
 </style>
 </head>
 <body>
@@ -932,6 +978,14 @@
     <feColorMatrix type="saturate" values="0"/>
   </filter>
 </svg>
+
+<nav class="site-nav" aria-label="Site navigation">
+  <a href="https://honestafblog.com" class="nav-brand">HonestAF</a>
+  <div class="nav-links">
+    <a href="https://honestafblog.com">Blog</a>
+    <a href="https://honestafblog.com/mtg-skill-analyzer/" aria-current="page">Analyzer</a>
+  </div>
+</nav>
 
 <div class="container">
   <header>

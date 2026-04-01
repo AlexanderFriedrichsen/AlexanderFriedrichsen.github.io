@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "I Built Agent Infrastructure for 30 Days Straight. Here's What Actually Worked."
+title:  "I Built Agent Infrastructure for Two Weeks Straight. Here's What Actually Worked."
 date:   2026-04-01 08:00:00 -0500
 categories: ai,agents,infrastructure,claude,observability
 ---
@@ -126,7 +126,7 @@ The gap between "researched" and "deployed" is where the interesting work happen
 
 ## What Actually Emerged
 
-After 30 days, a few patterns crystallized that I didn't plan for.
+After two weeks, a few patterns crystallized that I didn't plan for.
 
 **The vault IS the memory system.** I started assuming I'd need a separate memory layer -- vector database, retrieval-augmented generation, something. What I actually built is an Obsidian vault readable by both humans (graph view, backlinks, search) and agents (semantic search, knowledge graph tools). One source of truth, not two. The vault is the memory. Everything else is an index into it.
 

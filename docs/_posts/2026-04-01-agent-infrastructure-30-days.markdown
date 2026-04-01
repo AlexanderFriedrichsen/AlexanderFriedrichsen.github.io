@@ -89,6 +89,65 @@ All free MCP servers plus the existing XQuik subscription. Total new cost: zero.
 
 Cipher reviewed the cron scripts and found 2 blockers (a hardcoded API key and a lock file race condition) and 5 warnings. All fixed before deployment. The dry run found real gaps: LLC formation had stalled for 12 days with no progress, and "programmatic verifiers" were referenced 3 times across the vault but never researched. The system identified its own blind spots. Not AGI -- just good plumbing with a scheduled trigger.
 
+## The Research Layer
+
+The post so far makes it sound like I just built things. That's the lie of retrospective coherence. In practice, every major decision was preceded by deliberate research -- not "I Googled it" research but structured multi-pass sweeps that produced reports with confidence levels, gap analyses, and specific recommendations.
+
+Four deep-research Scout runs covered the landscape: enterprise orchestration patterns, solo dev innovations, reliability engineering for agent systems, and future capabilities on the horizon. Each sweep ran 25+ searches across 6 passes, with the later passes specifically targeting gaps identified by the earlier ones. The output was four structured reports totaling maybe 15,000 words, most of which I'll never re-read. But the act of generating them -- and, critically, having an agent synthesize the contradictions between sources -- is what made the build decisions feel less like guesswork.
+
+### Cherry-Picking from the Ecosystem
+
+The Claude Code community is building faster than any single person can track. Part of the research was evaluating what already existed so I wouldn't rebuild it worse.
+
+**SuperClaude** (21.9K stars) -- a monolithic framework: 30 slash commands, 20 agent personas, 7 behavioral modes. Our system is similar in spirit. Persona files as context injection is the same core idea. Where we diverged: SuperClaude puts everything in one package. We distribute it across individual agent files, a shared universal rules block, and project-level CLAUDE.md configs. The monolithic approach is easier to install. The distributed approach is easier to modify without breaking unrelated things. I chose the one that matched how I actually work.
+
+**Ralph Wiggum** (8.2K stars) -- an autonomous iteration loop with a circuit breaker. The agent keeps working, but if it detects no progress, repeated errors, or declining output quality, it stops itself. This directly inspired our `/ralph` skill. (The name is better than ours. We kept the name anyway.)
+
+**HCOM** (claude-hook-comms) -- inter-agent collision detection. We evaluated this, adopted the core pattern for our PostToolUse hook, and adapted it to our multi-worktree setup.
+
+**Context Engineering Kit** -- implements the MAKER pattern: clean-state execution plus filesystem memory plus voting across multiple agent outputs. The filesystem-as-memory approach validated what we were already doing with the Obsidian vault. Sometimes research tells you "keep going."
+
+**Claude Squad** (6.6K stars) -- a terminal UI for managing agents in parallel Git worktrees. Clean project. We evaluated it and decided we preferred native worktree isolation without the management layer. One fewer abstraction.
+
+**Superpowers** (99.2K stars) -- already covered in Act 2, but worth noting that the 5 patterns we cherry-picked came from a deliberate evaluation of the full framework. We didn't browse it casually. We read it systematically and took what fit.
+
+The pattern across all of these: evaluate everything, adopt nothing wholesale, cherry-pick aggressively. Frameworks are idea libraries, not commitments.
+
+### Programmatic Gates vs. Judgment Gates
+
+The most consequential research finding came from a conversation thread with an Anthropic red team member: "Invest time in programmatic task verifiers -- things that programmatically check that X task has actually been completed properly. As you move up the orchestration chain, workflows need to be reliably accomplished with increasingly low context agents."
+
+This clarified something I'd been feeling but hadn't articulated. The enforcement strategy splits into two clean layers:
+
+**Programmatic gates** -- deterministic, cheap, scalable. PostToolUse hooks that run Prettier and ESLint on every file edit. Regex scans for leaked secrets. PreToolUse hooks that block dangerous commands before they execute. Stop hooks that verify tests pass before an agent declares completion. These run in milliseconds. They never hallucinate. They never get tired.
+
+**Judgment gates** -- expensive, essential, non-automatable. Cipher reviewing code for architectural coherence, security implications, edge cases that no regex will catch. This is the 20% that requires intelligence.
+
+The research was unambiguous on one point: agents hallucinate business rule violations when rules exist only as natural language in prompts. "Don't commit API keys" in a persona file is a suggestion. A regex hook that fires on every file write is a law. Encode rules as executable checks, not prose. Save the expensive judgment for things that actually require it.
+
+### The Three-Phase QA Model
+
+Gauntlet -- our testing agent -- got redesigned mid-month based on research into AI-assisted testing. The TDAD paper (March 2026) found something counterintuitive: instructing an agent to "do TDD" actually _increased_ regressions by 9.94%. The problem wasn't the concept. The problem was that procedural instructions ("write test first, then implement, then refactor") don't transfer well to agents. What works: providing contextual information -- which tests to verify, what behavior to validate -- and letting the agent figure out the procedure.
+
+This produced a three-phase model:
+
+1. **Spec** (before build) -- Gauntlet writes failing tests that define expected behavior. These become Forge's implementation target.
+2. **Guard** (during build) -- PostToolUse hooks auto-run affected tests after every file edit. Immediate feedback, no manual step.
+3. **Verify** (after build) -- full suite, edge cases, mutation testing. Report goes to Cipher.
+
+The critical insight: without pre-existing tests, agents write implementation code that looks correct, then generate tests that verify what the code _does_ rather than what it _should do_. Tests that pass by construction. Green checkmarks that mean nothing. Phase 1 prevents this entirely -- the tests exist before the implementation, so the implementation has to satisfy an independent specification.
+
+### What's Researched but Not Deployed
+
+Honesty tax: here's what's still on the shelf.
+
+- **Circuit breakers for runaway loops** -- the Ralph pattern (detect stalls, repeated errors, output quality decline). Researched, not wired into our agents yet.
+- **Token budget enforcement** -- hard ceilings set before execution, calibrated at 2x the p95 of historical runs. Understood, not implemented.
+- **GUARDRAILS.md** -- a persistent file of learned safety constraints with triggers and provenance, so agents accumulate institutional knowledge about what not to do. Designed, not written.
+- **Microsoft's 27-failure-mode taxonomy** -- memory poisoning, agent compromise, cross-domain prompt injection. Read the paper, haven't mapped our system against it.
+
+We know what production-grade agent infrastructure looks like. We're not there. This is what's next. The gap between "researched" and "deployed" is where the interesting work happens in month two.
+
 ## What Actually Emerged
 
 After 30 days, a few patterns crystallized that I didn't plan for.

@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "I Built Agent Infrastructure for 30 Days Straight. Here's What Actually Worked."
-date:   2026-04-01 12:00:00 -0500
+date:   2026-04-01 08:00:00 -0500
 categories: ai,agents,infrastructure,claude,observability
 ---
 

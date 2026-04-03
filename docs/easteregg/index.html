@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Easter Egg Hunt | honestAFblog</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a1a;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #e0e0e0;
+      overflow: hidden;
+    }
+
+    .container {
+      text-align: center;
+      padding: 2rem;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .egg {
+      font-size: 5rem;
+      margin-bottom: 1rem;
+      display: inline-block;
+      animation: wobble 2s ease-in-out infinite;
+    }
+
+    @keyframes wobble {
+      0%, 100% { transform: rotate(-5deg); }
+      50% { transform: rotate(5deg); }
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #ff6ec4, #7873f5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      border: 2px solid #2a2a4a;
+      border-radius: 10px;
+      background: #12122a;
+      color: #e0e0e0;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      border-color: #7873f5;
+    }
+
+    input::placeholder {
+      color: #555;
+    }
+
+    button {
+      width: 100%;
+      padding: 0.85rem;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #ff6ec4, #7873f5);
+      color: white;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.3s;
+      margin-top: 0.5rem;
+    }
+
+    button:hover { transform: scale(1.02); }
+    button:active { transform: scale(0.98); }
+
+    .error {
+      color: #ff4d6a;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      min-height: 1.4em;
+      transition: opacity 0.3s;
+    }
+
+    .error.hidden { opacity: 0; }
+
+    /* Win screen */
+    .win-screen {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .win-screen.active {
+      display: block;
+      animation: fadeIn 0.6s ease;
+    }
+
+    .win-screen .trophy {
+      font-size: 6rem;
+      margin-bottom: 1rem;
+      animation: bounce 0.8s ease infinite alternate;
+    }
+
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-15px); }
+    }
+
+    .win-screen h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .win-screen .prize {
+      font-size: 1.3rem;
+      color: #ccc;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .win-screen .hug {
+      font-size: 4rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Confetti */
+    .confetti-piece {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      top: -20px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @keyframes confettiFall {
+      0% { top: -20px; opacity: 1; transform: rotate(0deg) scale(1); }
+      80% { opacity: 1; }
+      100% { top: 110vh; opacity: 0; transform: rotate(720deg) scale(0.5); }
+    }
+
+    .shake {
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-5px); }
+      80% { transform: translateX(5px); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container" id="loginScreen">
+    <div class="egg">🥚</div>
+    <h1>Easter Egg Hunt</h1>
+    <p class="subtitle">Think you found it? Prove it.</p>
+    <form id="easterForm" autocomplete="off">
+      <div class="form-group">
+        <input type="text" id="username" placeholder="Username" autofocus>
+      </div>
+      <div class="form-group">
+        <input type="password" id="password" placeholder="Password">
+      </div>
+      <button type="submit">Crack the Egg</button>
+    </form>
+    <p class="error hidden" id="errorMsg">Nope! That's not it. Keep hunting...</p>
+  </div>
+
+  <div class="win-screen" id="winScreen">
+    <div class="trophy">🐣</div>
+    <h1>YOU WON EASTER!</h1>
+    <p class="prize">You win one big group hug!</p>
+    <div class="hug">🫂🫂🫂</div>
+  </div>
+
+  <script>
+    const form = document.getElementById('easterForm');
+    const loginScreen = document.getElementById('loginScreen');
+    const winScreen = document.getElementById('winScreen');
+    const errorMsg = document.getElementById('errorMsg');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const u = usernameInput.value.trim();
+      const p = passwordInput.value;
+
+      if (u === 'Finder' && p === 'Glucky') {
+        loginScreen.style.display = 'none';
+        winScreen.classList.add('active');
+        launchConfetti();
+      } else {
+        errorMsg.classList.remove('hidden');
+        form.classList.add('shake');
+        setTimeout(() => form.classList.remove('shake'), 400);
+        setTimeout(() => errorMsg.classList.add('hidden'), 3000);
+      }
+    });
+
+    function launchConfetti() {
+      const colors = ['#ff6ec4', '#7873f5', '#ffe66d', '#4ecdc4', '#ff6b6b', '#48dbfb', '#ff9ff3', '#54a0ff'];
+      const shapes = ['circle', 'square', 'triangle'];
+
+      for (let wave = 0; wave < 3; wave++) {
+        setTimeout(() => {
+          for (let i = 0; i < 60; i++) {
+            createConfettiPiece(colors, shapes, wave);
+          }
+        }, wave * 600);
+      }
+    }
+
+    function createConfettiPiece(colors, shapes, wave) {
+      const el = document.createElement('div');
+      el.classList.add('confetti-piece');
+
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const shape = shapes[Math.floor(Math.random() * shapes.length)];
+      const size = Math.random() * 8 + 6;
+      const left = Math.random() * 100;
+      const duration = Math.random() * 2 + 2;
+      const delay = Math.random() * 0.8;
+
+      el.style.left = left + 'vw';
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.style.background = color;
+
+      if (shape === 'circle') {
+        el.style.borderRadius = '50%';
+      } else if (shape === 'triangle') {
+        el.style.width = '0';
+        el.style.height = '0';
+        el.style.background = 'transparent';
+        el.style.borderLeft = size / 2 + 'px solid transparent';
+        el.style.borderRight = size / 2 + 'px solid transparent';
+        el.style.borderBottom = size + 'px solid ' + color;
+      }
+
+      el.style.animation = `confettiFall ${duration}s ease-in ${delay}s forwards`;
+
+      document.body.appendChild(el);
+
+      setTimeout(() => el.remove(), (duration + delay) * 1000 + 200);
+    }
+  </script>
+</body>
+</html>

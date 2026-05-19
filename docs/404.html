@@ -4,22 +4,46 @@ layout: default
 ---
 
 <style type="text/css" media="screen">
-  .container {
-    margin: 10px auto;
+  .error-page {
+    margin: 2em auto;
     max-width: 600px;
-    text-align: center;
   }
-  h1 {
-    margin: 30px 0;
-    font-size: 4em;
-    line-height: 1;
-    letter-spacing: -1px;
+  .error-page h1 {
+    font-size: 3em;
+    margin-bottom: 0.2em;
+  }
+  .error-page h2 {
+    margin-top: 1.5em;
+  }
+  .error-page ul {
+    list-style: none;
+    padding-left: 0;
+  }
+  .error-page ul li {
+    margin-bottom: 0.4em;
   }
 </style>
 
-<div class="container">
+<div class="error-page">
   <h1>404</h1>
+  <p>This page doesn't exist. Here are some places you might be looking for:</p>
 
-  <p><strong>Page not found :(</strong></p>
-  <p>The requested page could not be found.</p>
+  <h2>Site Pages</h2>
+  <ul>
+    <li><a href="{{ '/' | relative_url }}">Home</a></li>
+    <li><a href="{{ '/about/' | relative_url }}">About</a></li>
+    <li><a href="{{ '/archive/' | relative_url }}">Archive</a></li>
+    <li><a href="/Portfolio/">Portfolio</a></li>
+    <li><a href="{{ '/mtg-skill-analyzer/' | relative_url }}">MTG Skill Analyzer</a></li>
+  </ul>
+
+  <h2>Recent Posts</h2>
+  <ul>
+    {% for post in site.posts limit:5 %}
+    <li>
+      <strong>{{ post.date | date: "%Y-%m-%d" }}</strong> &mdash;
+      <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+    </li>
+    {% endfor %}
+  </ul>
 </div>
